@@ -222,7 +222,7 @@ function buildVocabQuestions(n) {
     return {
       promptLabel: dir === "jp2it" ? "Cosa significa?" : "Come si dice in giapponese?",
       mainText: dir === "jp2it" ? jpLabel(w) : w.it,
-      hintText: dir === "jp2it" ? w.ro : null,
+      hintText: null,
       correctValue,
       options
     };
