@@ -282,20 +282,20 @@ const VERB_TYPE_LABELS = { ru: "ru-verbo", u: "u-verbo", irr: "irregolare" };
 const ADJ_TYPE_LABELS = { i: "い-aggettivo", na: "な-aggettivo" };
 
 const VERB_FORM_DEFS = [
-  { key: "masu", label: "Qual è la forma ます (presente affermativo) di questo verbo?" },
-  { key: "masen", label: "Qual è la forma ません (presente negativo) di questo verbo?" },
-  { key: "mashita", label: "Qual è la forma ました (passato affermativo) di questo verbo?" },
-  { key: "masendeshita", label: "Qual è la forma ませんでした (passato negativo) di questo verbo?" },
-  { key: "te", label: "Qual è la forma て di questo verbo?" },
-  { key: "ta", label: "Qual è la forma た (passato informale) di questo verbo?" }
+  { key: "masu", label: "Qual è la forma presente affermativa (educata)?" },
+  { key: "masen", label: "Qual è la forma presente negativa (educata)?" },
+  { key: "mashita", label: "Qual è la forma passata affermativa (educata)?" },
+  { key: "masendeshita", label: "Qual è la forma passata negativa (educata)?" },
+  { key: "te", label: "Qual è la forma che usi per collegare due azioni o fare una richiesta (es. + ください)?" },
+  { key: "ta", label: "Qual è la forma del passato informale (quella che usi con gli amici)?" }
 ];
 
 const ADJ_FORM_DEFS = [
-  { key: "pres_aff", label: "Qual è la forma presente affermativa di questo aggettivo?" },
-  { key: "pres_neg", label: "Qual è la forma presente negativa di questo aggettivo?" },
-  { key: "past_aff", label: "Qual è la forma passata affermativa di questo aggettivo?" },
-  { key: "past_neg", label: "Qual è la forma passata negativa di questo aggettivo?" },
-  { key: "te", label: "Qual è la forma て (per collegare frasi) di questo aggettivo?" }
+  { key: "pres_aff", label: "Qual è la forma presente affermativa?" },
+  { key: "pres_neg", label: "Qual è la forma presente negativa?" },
+  { key: "past_aff", label: "Qual è la forma passata affermativa?" },
+  { key: "past_neg", label: "Qual è la forma passata negativa?" },
+  { key: "te", label: "Qual è la forma che usi per collegare due aggettivi o due frasi?" }
 ];
 
 function buildVerbTypeQuestion() {
@@ -309,20 +309,40 @@ function buildVerbTypeQuestion() {
   };
 }
 
-function buildVerbFormQuestion() {
+// Le opzioni sono SEMPRE le forme dello stesso verbo (trabocchetti), mai di verbi diversi:
+// così bisogna sapere davvero quale forma è quale, non solo riconoscere lo stile di lettura.
+// Ritorna un ARRAY: [domanda sulla forma, domanda sul significato di quella forma]
+// (la seconda è omessa se la forma non ha un significato proprio, es. て)
+function buildVerbFormQuestionPair() {
   const def = VERB_FORM_DEFS[Math.floor(Math.random() * VERB_FORM_DEFS.length)];
   const pool = VERBS_ALL.filter(w => w.forms[def.key]);
   const w = pool[Math.floor(Math.random() * pool.length)];
   const correct = w.forms[def.key];
-  const otherPool = pool.filter(p => p.forms[def.key] !== correct);
-  const distractors = shuffle(otherPool).slice(0, 3).map(p => p.forms[def.key]);
-  return {
+  const allForms = Object.keys(w.forms).filter(k => k !== def.key).map(k => w.forms[k]);
+  const uniqueOtherForms = [...new Set(allForms)].filter(v => v !== correct);
+  const distractors = shuffle(uniqueOtherForms).slice(0, 3);
+  const formQ = {
     promptLabel: def.label,
     mainText: jpLabel(w),
     hintText: null,
     correctValue: correct,
     options: shuffle([correct, ...distractors])
   };
+
+  const meaning = w.meanings[def.key];
+  if (!meaning) return [formQ]; // es. forma て: non ha un significato proprio isolato
+
+  const allMeanings = Object.keys(w.meanings).filter(k => k !== def.key && w.meanings[k]).map(k => w.meanings[k]);
+  const uniqueOtherMeanings = [...new Set(allMeanings)].filter(v => v !== meaning);
+  const meaningDistractors = shuffle(uniqueOtherMeanings).slice(0, 3);
+  const meaningQ = {
+    promptLabel: "Cosa significa questa forma?",
+    mainText: correct,
+    hintText: null,
+    correctValue: meaning,
+    options: shuffle([meaning, ...meaningDistractors])
+  };
+  return [formQ, meaningQ];
 }
 
 function buildAdjTypeQuestion() {
@@ -336,33 +356,57 @@ function buildAdjTypeQuestion() {
   };
 }
 
-function buildAdjFormQuestion() {
+// Stesso principio del verbo: distrattori dalla stessa parola, e domanda di significato collegata.
+function buildAdjFormQuestionPair() {
   const def = ADJ_FORM_DEFS[Math.floor(Math.random() * ADJ_FORM_DEFS.length)];
   const pool = ADJECTIVES_ALL.filter(w => w.forms[def.key]);
   const w = pool[Math.floor(Math.random() * pool.length)];
   const correct = w.forms[def.key];
-  const otherPool = pool.filter(p => p.forms[def.key] !== correct);
-  const distractors = shuffle(otherPool).slice(0, 3).map(p => p.forms[def.key]);
-  return {
+  const allForms = Object.keys(w.forms).filter(k => k !== def.key).map(k => w.forms[k]);
+  const uniqueOtherForms = [...new Set(allForms)].filter(v => v !== correct);
+  const distractors = shuffle(uniqueOtherForms).slice(0, 3);
+  const formQ = {
     promptLabel: def.label,
     mainText: jpLabel(w),
     hintText: null,
     correctValue: correct,
     options: shuffle([correct, ...distractors])
   };
+
+  const meaning = w.meanings[def.key];
+  if (!meaning) return [formQ]; // es. forma て: non ha un significato proprio isolato
+
+  const allMeanings = Object.keys(w.meanings).filter(k => k !== def.key && w.meanings[k]).map(k => w.meanings[k]);
+  const uniqueOtherMeanings = [...new Set(allMeanings)].filter(v => v !== meaning);
+  const meaningDistractors = shuffle(uniqueOtherMeanings).slice(0, 3);
+  const meaningQ = {
+    promptLabel: "Cosa significa questa forma?",
+    mainText: correct,
+    hintText: null,
+    correctValue: meaning,
+    options: shuffle([meaning, ...meaningDistractors])
+  };
+  return [formQ, meaningQ];
 }
 
-// Costruisce N domande di coniugazione, mescolando le 4 categorie
+// Costruisce N domande di coniugazione, mescolando le 4 categorie.
+// Le domande di forma sono seguite dalla domanda di significato collegata (stesso "slot").
 function buildConjugationQuestions(n) {
-  const builders = [buildVerbTypeQuestion, buildVerbFormQuestion, buildAdjTypeQuestion, buildAdjFormQuestion];
+  const builders = [
+    () => [buildVerbTypeQuestion()],
+    buildVerbFormQuestionPair,
+    () => [buildAdjTypeQuestion()],
+    buildAdjFormQuestionPair
+  ];
   const results = [];
-  for (let i = 0; i < n; i++) {
+  while (results.length < n) {
     const builder = builders[Math.floor(Math.random() * builders.length)];
-    results.push(builder());
+    results.push(...builder());
   }
   return results;
 }
 // ==============================================================================
+
 
 function buildQuestions(mode, n) {
   if (mode === "kanji") return buildKanjiQuestions(n);
