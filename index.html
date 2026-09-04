@@ -216,8 +216,16 @@ function buildVocabQuestions(n) {
     const dir = Math.random() < 0.5 ? "jp2it" : "it2jp";
     const valueOf = (p) => dir === "jp2it" ? p.it : jpLabel(p);
     const correctValue = valueOf(w);
-    const otherPool = pool.filter(p => valueOf(p) !== correctValue);
-    const distractors = shuffle(otherPool).slice(0, 3).map(valueOf);
+
+    // Se la parola appartiene a una categoria "stretta" (numeri, giorni, mesi, famiglia,
+    // paesi, colori), preferisci distrattori dalla STESSA categoria: molto più difficili
+    // da eliminare a colpo d'occhio rispetto a parole scelte a caso da tutto il pool.
+    let candidatePool = pool.filter(p => valueOf(p) !== correctValue);
+    if (w.cat) {
+      const sameCat = candidatePool.filter(p => p.cat === w.cat);
+      if (sameCat.length >= 3) candidatePool = sameCat;
+    }
+    const distractors = shuffle(candidatePool).slice(0, 3).map(valueOf);
     const options = shuffle([correctValue, ...distractors]);
     return {
       promptLabel: dir === "jp2it" ? "Cosa significa?" : "Come si dice in giapponese?",
