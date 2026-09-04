@@ -164,6 +164,7 @@
 <script src="data-vocab.js"></script>
 <script src="data-kanji.js"></script>
 <script src="data-grammar.js"></script>
+<script src="data-verbs.js"></script>
 <script>
 // ===================== MOTORE DEL QUIZ =====================
 // I database (vocabolario, kanji, grammatica) sono caricati dai file
@@ -276,51 +277,193 @@ function buildKanjiQuestions(n) {
   return shuffle([...readingQs, ...exampleQs]);
 }
 
+// ===================== CONIUGAZIONE (verbi e aggettivi) =====================
+const VERB_TYPE_LABELS = { ru: "ru-verbo", u: "u-verbo", irr: "irregolare" };
+const ADJ_TYPE_LABELS = { i: "い-aggettivo", na: "な-aggettivo" };
+
+const VERB_FORM_DEFS = [
+  { key: "masu", label: "Qual è la forma ます (presente affermativo) di questo verbo?" },
+  { key: "masen", label: "Qual è la forma ません (presente negativo) di questo verbo?" },
+  { key: "mashita", label: "Qual è la forma ました (passato affermativo) di questo verbo?" },
+  { key: "masendeshita", label: "Qual è la forma ませんでした (passato negativo) di questo verbo?" },
+  { key: "te", label: "Qual è la forma て di questo verbo?" },
+  { key: "ta", label: "Qual è la forma た (passato informale) di questo verbo?" }
+];
+
+const ADJ_FORM_DEFS = [
+  { key: "pres_aff", label: "Qual è la forma presente affermativa di questo aggettivo?" },
+  { key: "pres_neg", label: "Qual è la forma presente negativa di questo aggettivo?" },
+  { key: "past_aff", label: "Qual è la forma passata affermativa di questo aggettivo?" },
+  { key: "past_neg", label: "Qual è la forma passata negativa di questo aggettivo?" },
+  { key: "te", label: "Qual è la forma て (per collegare frasi) di questo aggettivo?" }
+];
+
+function buildVerbTypeQuestion() {
+  const w = VERBS_ALL[Math.floor(Math.random() * VERBS_ALL.length)];
+  return {
+    promptLabel: "Che tipo di verbo è questo?",
+    mainText: jpLabel(w),
+    hintText: null,
+    correctValue: VERB_TYPE_LABELS[w.type],
+    options: shuffle(Object.values(VERB_TYPE_LABELS))
+  };
+}
+
+function buildVerbFormQuestion() {
+  const def = VERB_FORM_DEFS[Math.floor(Math.random() * VERB_FORM_DEFS.length)];
+  const pool = VERBS_ALL.filter(w => w.forms[def.key]);
+  const w = pool[Math.floor(Math.random() * pool.length)];
+  const correct = w.forms[def.key];
+  const otherPool = pool.filter(p => p.forms[def.key] !== correct);
+  const distractors = shuffle(otherPool).slice(0, 3).map(p => p.forms[def.key]);
+  return {
+    promptLabel: def.label,
+    mainText: jpLabel(w),
+    hintText: null,
+    correctValue: correct,
+    options: shuffle([correct, ...distractors])
+  };
+}
+
+function buildAdjTypeQuestion() {
+  const w = ADJECTIVES_ALL[Math.floor(Math.random() * ADJECTIVES_ALL.length)];
+  return {
+    promptLabel: "Che tipo di aggettivo è questo?",
+    mainText: jpLabel(w),
+    hintText: null,
+    correctValue: ADJ_TYPE_LABELS[w.type],
+    options: shuffle(Object.values(ADJ_TYPE_LABELS))
+  };
+}
+
+function buildAdjFormQuestion() {
+  const def = ADJ_FORM_DEFS[Math.floor(Math.random() * ADJ_FORM_DEFS.length)];
+  const pool = ADJECTIVES_ALL.filter(w => w.forms[def.key]);
+  const w = pool[Math.floor(Math.random() * pool.length)];
+  const correct = w.forms[def.key];
+  const otherPool = pool.filter(p => p.forms[def.key] !== correct);
+  const distractors = shuffle(otherPool).slice(0, 3).map(p => p.forms[def.key]);
+  return {
+    promptLabel: def.label,
+    mainText: jpLabel(w),
+    hintText: null,
+    correctValue: correct,
+    options: shuffle([correct, ...distractors])
+  };
+}
+
+// Costruisce N domande di coniugazione, mescolando le 4 categorie
+function buildConjugationQuestions(n) {
+  const builders = [buildVerbTypeQuestion, buildVerbFormQuestion, buildAdjTypeQuestion, buildAdjFormQuestion];
+  const results = [];
+  for (let i = 0; i < n; i++) {
+    const builder = builders[Math.floor(Math.random() * builders.length)];
+    results.push(builder());
+  }
+  return results;
+}
+// ==============================================================================
 
 function buildQuestions(mode, n) {
-  return mode === "kanji" ? buildKanjiQuestions(n) : buildVocabQuestions(n);
+  if (mode === "kanji") return buildKanjiQuestions(n);
+  if (mode === "grammar") return buildGrammarQuestions(n);
+  if (mode === "conj") return buildConjugationQuestions(n);
+  return buildVocabQuestions(n);
+}
+
+// Costruisce N domande di grammatica pescando dal pool già pronto (GRAMMAR_ALL)
+function buildGrammarQuestions(n) {
+  const pool = GRAMMAR_ALL;
+  const chosen = shuffle(pool).slice(0, Math.min(n, pool.length));
+  return chosen.map(q => ({
+    promptLabel: q.point,
+    mainText: q.prompt,
+    hintText: null,
+    correctValue: q.correct,
+    options: shuffle(q.options),
+    explanation: q.explanation
+  }));
 }
 
 function modeTitle(mode) {
-  return mode === "kanji" ? "Kanji" : "Vocabolario";
+  if (mode === "kanji") return "Kanji";
+  if (mode === "grammar") return "Grammatica";
+  if (mode === "conj") return "Coniugazione";
+  return "Vocabolario";
 }
 
 function render() {
   const app = document.getElementById("app");
-  const vocabMax = VOCAB_ALL.length;
-  const kanjiMax = KANJI_ALL.length * 2; // metà domande "lettura", metà domande "esempio"
+
+  // Configurazione centralizzata per ciascuna modalità del quiz
+  const MODES = {
+    vocab: {
+      title: "Vocabolario",
+      lessons: "Lezioni 1-10",
+      max: VOCAB_ALL.length,
+      menuLabel: `Vocabolario (${VOCAB_ALL.length} parole)`,
+      countLabel: `${VOCAB_ALL.length} vocaboli disponibili`,
+      setupQuestion: "Quanti vocaboli vuoi testare?"
+    },
+    kanji: {
+      title: "Kanji",
+      lessons: "Lezioni 3-7",
+      max: KANJI_ALL.length * 2, // metà domande "lettura", metà "esempio"
+      menuLabel: `Kanji (${KANJI_ALL.length} kanji, Lez. 3-7)`,
+      countLabel: `${KANJI_ALL.length} kanji disponibili`,
+      setupQuestion: "Quante domande vuoi (lettura + esempi)?"
+    },
+    grammar: {
+      title: "Grammatica",
+      lessons: "Lezioni 1-10",
+      max: GRAMMAR_ALL.length,
+      menuLabel: `Grammatica (${GRAMMAR_ALL.length} domande, Lez. 1-10)`,
+      countLabel: `${GRAMMAR_ALL.length} domande disponibili`,
+      setupQuestion: "Quante domande di grammatica vuoi?"
+    },
+    conj: {
+      title: "Coniugazione",
+      lessons: "Lezioni 3-10",
+      max: 60,
+      menuLabel: `Coniugazione (${VERBS_ALL.length} verbi, ${ADJECTIVES_ALL.length} aggettivi)`,
+      countLabel: `${VERBS_ALL.length} verbi e ${ADJECTIVES_ALL.length} aggettivi disponibili`,
+      setupQuestion: "Quante domande di coniugazione vuoi?"
+    }
+  };
 
   if (state.screen === "mode") {
     app.innerHTML = `
       <h1>Genki I &mdash; Quiz</h1>
-      <p class="subtitle">Lezioni 1-10 (vocab) &middot; 3-7 (kanji) &middot; scegli cosa allenare</p>
+      <p class="subtitle">Lezioni 1-10 &middot; scegli cosa allenare</p>
       <div class="card">
-        <button id="vocabBtn">Vocabolario (${vocabMax} parole)</button>
+        <button id="vocabBtn">${MODES.vocab.menuLabel}</button>
         <div style="height:10px"></div>
-        <button id="kanjiBtn" class="secondary">Kanji (${KANJI_ALL.length} kanji, Lez. 3-7)</button>
+        <button id="kanjiBtn" class="secondary">${MODES.kanji.menuLabel}</button>
+        <div style="height:10px"></div>
+        <button id="grammarBtn" class="secondary">${MODES.grammar.menuLabel}</button>
+        <div style="height:10px"></div>
+        <button id="conjBtn" class="secondary">${MODES.conj.menuLabel}</button>
       </div>
     `;
-    document.getElementById("vocabBtn").onclick = () => {
-      state.mode = "vocab";
-      state.screen = "setup";
-      render();
-    };
-    document.getElementById("kanjiBtn").onclick = () => {
-      state.mode = "kanji";
-      state.screen = "setup";
-      render();
-    };
+    ["vocab", "kanji", "grammar", "conj"].forEach(m => {
+      document.getElementById(m + "Btn").onclick = () => {
+        state.mode = m;
+        state.screen = "setup";
+        render();
+      };
+    });
     return;
   }
 
   if (state.screen === "setup") {
-    const max = state.mode === "kanji" ? kanjiMax : vocabMax;
+    const cfg = MODES[state.mode];
+    const max = cfg.max;
     const history = loadHistory().filter(h => (h.mode || "Vocabolario") === modeTitle(state.mode));
     app.innerHTML = `
-      <h1>Genki I &mdash; ${modeTitle(state.mode)}</h1>
-      <p class="subtitle">${state.mode === "kanji" ? "Lezioni 3-7" : "Lezioni 1-10"} &middot; ${state.mode === "kanji" ? KANJI_ALL.length + " kanji disponibili" : max + " vocaboli disponibili"}</p>
+      <h1>Genki I &mdash; ${cfg.title}</h1>
+      <p class="subtitle">${cfg.lessons} &middot; ${cfg.countLabel}</p>
       <div class="card">
-        <label for="numItems">${state.mode === "kanji" ? "Quante domande vuoi (lettura + esempi)?" : "Quanti vocaboli vuoi testare?"}</label>
+        <label for="numItems">${cfg.setupQuestion}</label>
         <input type="number" id="numItems" min="4" max="${max}" value="${Math.min(state.totalItems, max)}">
         <button id="startBtn">Inizia il quiz</button>
       </div>
@@ -381,14 +524,15 @@ function render() {
         state.answered = true;
         const isCorrect = opt === q.correctValue;
         const feedback = document.getElementById("feedback");
+        const explanationHtml = q.explanation ? `<div style="margin-top:6px; font-weight:400; color:var(--text-secondary,#7a7a76);">${q.explanation}</div>` : "";
         if (isCorrect) {
           btn.classList.add("correct");
           state.score++;
-          feedback.textContent = "Corretto!";
+          feedback.innerHTML = "Corretto!" + explanationHtml;
           feedback.className = "feedback correct";
         } else {
           btn.classList.add("wrong");
-          feedback.textContent = `Sbagliato — risposta giusta: ${q.correctValue}`;
+          feedback.innerHTML = `Sbagliato — risposta giusta: ${q.correctValue}` + explanationHtml;
           feedback.className = "feedback wrong";
           [...optsDiv.children].forEach(c => {
             if (c.textContent === q.correctValue) c.classList.add("correct");
