@@ -562,6 +562,60 @@ const VOCAB = {
     {jp:"このごろ", kanji:null, ro:null, it:"di questi tempi"},
     {jp:"〜ご", kanji:"〜後", ro:null, it:"dopo..."},
     {jp:"〜か〜", kanji:null, ro:null, it:"o"}
+  ],
+
+  // Useful Expressions - Lezione 4, pag. 127: giorni del mese, mesi, espressioni temporali
+  utili4: [
+    {jp:"ついたち", kanji:"一日", ro:"tsuitachi", it:"il giorno 1 (del mese)"},
+    {jp:"ふつか", kanji:"二日", ro:"futsuka", it:"il giorno 2 (del mese)"},
+    {jp:"みっか", kanji:"三日", ro:"mikka", it:"il giorno 3 (del mese)"},
+    {jp:"よっか", kanji:"四日", ro:"yokka", it:"il giorno 4 (del mese)"},
+    {jp:"いつか", kanji:"五日", ro:"itsuka", it:"il giorno 5 (del mese)"},
+    {jp:"むいか", kanji:"六日", ro:"muika", it:"il giorno 6 (del mese)"},
+    {jp:"なのか", kanji:"七日", ro:"nanoka", it:"il giorno 7 (del mese)"},
+    {jp:"ようか", kanji:"八日", ro:"yooka", it:"il giorno 8 (del mese)"},
+    {jp:"ここのか", kanji:"九日", ro:"kokonoka", it:"il giorno 9 (del mese)"},
+    {jp:"とおか", kanji:"十日", ro:"tooka", it:"il giorno 10 (del mese)"},
+    {jp:"じゅういちにち", kanji:"十一日", ro:"juuichinichi", it:"il giorno 11 (del mese)"},
+    {jp:"じゅうににち", kanji:"十二日", ro:"juuninichi", it:"il giorno 12 (del mese)"},
+    {jp:"じゅうさんにち", kanji:"十三日", ro:"juusannichi", it:"il giorno 13 (del mese)"},
+    {jp:"じゅうよっか", kanji:"十四日", ro:"juuyokka", it:"il giorno 14 (del mese)"},
+    {jp:"じゅうごにち", kanji:"十五日", ro:"juugonichi", it:"il giorno 15 (del mese)"},
+    {jp:"じゅうろくにち", kanji:"十六日", ro:"juurokunichi", it:"il giorno 16 (del mese)"},
+    {jp:"じゅうしちにち", kanji:"十七日", ro:"juushichinichi", it:"il giorno 17 (del mese)"},
+    {jp:"じゅうはちにち", kanji:"十八日", ro:"juuhachinichi", it:"il giorno 18 (del mese)"},
+    {jp:"じゅうくにち", kanji:"十九日", ro:"juukunichi", it:"il giorno 19 (del mese)"},
+    {jp:"はつか", kanji:"二十日", ro:"hatsuka", it:"il giorno 20 (del mese)"},
+    {jp:"にじゅういちにち", kanji:"二十一日", ro:"nijuuichinichi", it:"il giorno 21 (del mese)"},
+    {jp:"にじゅうににち", kanji:"二十二日", ro:"nijuuninichi", it:"il giorno 22 (del mese)"},
+    {jp:"にじゅうさんにち", kanji:"二十三日", ro:"nijuusannichi", it:"il giorno 23 (del mese)"},
+    {jp:"にじゅうよっか", kanji:"二十四日", ro:"nijuuyokka", it:"il giorno 24 (del mese)"},
+    {jp:"にじゅうごにち", kanji:"二十五日", ro:"nijuugonichi", it:"il giorno 25 (del mese)"},
+    {jp:"にじゅうろくにち", kanji:"二十六日", ro:"nijuurokunichi", it:"il giorno 26 (del mese)"},
+    {jp:"にじゅうしちにち", kanji:"二十七日", ro:"nijuushichinichi", it:"il giorno 27 (del mese)"},
+    {jp:"にじゅうはちにち", kanji:"二十八日", ro:"nijuuhachinichi", it:"il giorno 28 (del mese)"},
+    {jp:"にじゅうくにち", kanji:"二十九日", ro:"nijuukunichi", it:"il giorno 29 (del mese)"},
+    {jp:"さんじゅうにち", kanji:"三十日", ro:"sanjuunichi", it:"il giorno 30 (del mese)"},
+    {jp:"さんじゅういちにち", kanji:"三十一日", ro:"sanjuuichinichi", it:"il giorno 31 (del mese)"},
+    {jp:"いちがつ", kanji:"一月", ro:"ichigatsu", it:"gennaio"},
+    {jp:"にがつ", kanji:"二月", ro:"nigatsu", it:"febbraio"},
+    {jp:"さんがつ", kanji:"三月", ro:"sangatsu", it:"marzo"},
+    {jp:"しがつ", kanji:"四月", ro:"shigatsu", it:"aprile"},
+    {jp:"ごがつ", kanji:"五月", ro:"gogatsu", it:"maggio"},
+    {jp:"ろくがつ", kanji:"六月", ro:"rokugatsu", it:"giugno"},
+    {jp:"しちがつ", kanji:"七月", ro:"shichigatsu", it:"luglio"},
+    {jp:"はちがつ", kanji:"八月", ro:"hachigatsu", it:"agosto"},
+    {jp:"くがつ", kanji:"九月", ro:"kugatsu", it:"settembre"},
+    {jp:"じゅうがつ", kanji:"十月", ro:"juugatsu", it:"ottobre"},
+    {jp:"じゅういちがつ", kanji:"十一月", ro:"juuichigatsu", it:"novembre"},
+    {jp:"じゅうにがつ", kanji:"十二月", ro:"juunigatsu", it:"dicembre"},
+    {jp:"おととい", kanji:null, ro:"ototoi", it:"l'altro ieri"},
+    {jp:"にしゅうかんまえ", kanji:"二週間前", ro:"nishuukanmae", it:"due settimane fa"},
+    {jp:"にかげつまえ", kanji:"二か月前", ro:"nikagetsumae", it:"due mesi fa"},
+    {jp:"おととし", kanji:null, ro:"ototoshi", it:"due anni fa (l'anno prima dello scorso)"},
+    {jp:"さらいしゅう", kanji:"再来週", ro:"saraishuu", it:"tra due settimane"},
+    {jp:"さらいげつ", kanji:"再来月", ro:"saraigetsu", it:"tra due mesi"},
+    {jp:"さらいねん", kanji:"再来年", ro:"sarainen", it:"tra due anni"}
   ]
 };
 
@@ -569,5 +623,5 @@ const VOCAB = {
 const VOCAB_ALL = [
   ...VOCAB.lezione1, ...VOCAB.lezione2, ...VOCAB.lezione3, ...VOCAB.lezione4,
   ...VOCAB.lezione5, ...VOCAB.lezione6, ...VOCAB.lezione7, ...VOCAB.lezione8,
-  ...VOCAB.lezione9, ...VOCAB.lezione10
+  ...VOCAB.lezione9, ...VOCAB.lezione10, ...VOCAB.utili4
 ];
