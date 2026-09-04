@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Genki - Quiz Vocabolario</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #faf6f0;
+    color: #2c2c2a;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+  #app {
+    width: 100%;
+    max-width: 480px;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    color: #99461f;
+  }
+  .subtitle {
+    font-size: 14px;
+    color: #7a7a76;
+    margin: 0 0 24px;
+  }
+  .card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin-bottom: 16px;
+  }
+  label {
+    display: block;
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 8px;
+  }
+  select, input[type=number] {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    background: #fff;
+    margin-bottom: 16px;
+  }
+  button {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    background: #d85a30;
+    color: #fff;
+    cursor: pointer;
+  }
+  button:active { transform: scale(0.98); }
+  button.secondary {
+    background: #fff;
+    color: #d85a30;
+    border: 1.5px solid #d85a30;
+  }
+  button.option {
+    background: #fff;
+    color: #2c2c2a;
+    border: 1.5px solid #e0ddd6;
+    text-align: left;
+    font-weight: 400;
+    margin-bottom: 10px;
+    font-size: 15px;
+  }
+  button.option:last-child { margin-bottom: 0; }
+  button.correct {
+    background: #eaf3de;
+    border-color: #639922;
+    color: #27500a;
+  }
+  button.wrong {
+    background: #fcebeb;
+    border-color: #e24b4a;
+    color: #791f1f;
+  }
+  .progress {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #7a7a76;
+    margin-bottom: 12px;
+  }
+  .question-box {
+    text-align: center;
+    background: #fbeee3;
+    border-radius: 12px;
+    padding: 24px 16px;
+    margin-bottom: 20px;
+  }
+  .question-hint {
+    font-size: 12px;
+    color: #99461f;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .question-text {
+    font-size: 26px;
+    font-weight: 600;
+    margin: 0;
+  }
+  .question-sub {
+    font-size: 13px;
+    color: #a08b6f;
+    margin: 8px 0 0;
+  }
+  .feedback {
+    font-size: 14px;
+    min-height: 20px;
+    margin: 12px 0;
+    text-align: center;
+    font-weight: 500;
+  }
+  .feedback.correct { color: #27500a; }
+  .feedback.wrong { color: #791f1f; }
+  .score-big {
+    font-size: 40px;
+    font-weight: 700;
+    text-align: center;
+    margin: 8px 0;
+    color: #d85a30;
+  }
+  .score-label {
+    text-align: center;
+    font-size: 14px;
+    color: #7a7a76;
+    margin-bottom: 20px;
+  }
+  .history {
+    font-size: 13px;
+    color: #7a7a76;
+    margin-top: 16px;
+    border-top: 1px solid #eee;
+    padding-top: 12px;
+  }
+  .history-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+  }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ===================== DATABASE VOCABOLARIO - LEZIONE 1 =====================
+const VOCAB = {
+  lezione1: [
+    {jp:"だいがく", ro:"daigaku", it:"università"},
+    {jp:"こうこう", ro:"koukou", it:"liceo"},
+    {jp:"がくせい", ro:"gakusee", it:"studente"},
+    {jp:"だいがくせい", ro:"daigakusee", it:"studente universitario"},
+    {jp:"りゅうがくせい", ro:"ryuugakusee", it:"studente straniero"},
+    {jp:"せんせい", ro:"sensee", it:"insegnante / professore"},
+    {jp:"いちねんせい", ro:"ichinensee", it:"studente del primo anno"},
+    {jp:"せんこう", ro:"senkoo", it:"materia di specializzazione"},
+    {jp:"わたし", ro:"watashi", it:"io"},
+    {jp:"ともだち", ro:"tomodachi", it:"amico/a"},
+    {jp:"にほんじん", ro:"nihonjin", it:"giapponese (persona)"},
+    {jp:"いま", ro:"ima", it:"adesso"},
+    {jp:"ごぜん", ro:"gozen", it:"mattina (A.M.)"},
+    {jp:"ごご", ro:"gogo", it:"pomeriggio (P.M.)"},
+    {jp:"いちじ", ro:"ichiji", it:"l'una (in punto)"},
+    {jp:"はん", ro:"han", it:"mezza"},
+    {jp:"にじはん", ro:"nijihan", it:"le due e mezza"},
+    {jp:"にほん", ro:"Nihon", it:"Giappone"},
+    {jp:"アメリカ", ro:"Amerika", it:"Stati Uniti"},
+    {jp:"にほんご", ro:"nihongo", it:"lingua giapponese"},
+    {jp:"でんわ", ro:"denwa", it:"telefono"},
+    {jp:"ばんごう", ro:"bangoo", it:"numero"},
+    {jp:"なまえ", ro:"namae", it:"nome"},
+    {jp:"なに", ro:"nani", it:"cosa"},
+    {jp:"あのう", ro:"anoo", it:"ehm..."},
+    {jp:"はい", ro:"hai", it:"sì"},
+    {jp:"そうです", ro:"soo desu", it:"è così / esatto"},
+    {jp:"そうですか", ro:"soo desu ka", it:"ah sì? / davvero?"},
+    {jp:"イギリス", ro:"Igirisu", it:"Regno Unito"},
+    {jp:"オーストラリア", ro:"Oosutoraria", it:"Australia"},
+    {jp:"かんこく", ro:"Kankoku", it:"Corea"},
+    {jp:"カナダ", ro:"Kanada", it:"Canada"},
+    {jp:"ちゅうごく", ro:"Chuugoku", it:"Cina"},
+    {jp:"インド", ro:"Indo", it:"India"},
+    {jp:"エジプト", ro:"Ejiputo", it:"Egitto"},
+    {jp:"フィリピン", ro:"Firipin", it:"Filippine"},
+    {jp:"けいざい", ro:"keezai", it:"economia"},
+    {jp:"こうがく", ro:"koogaku", it:"ingegneria"},
+    {jp:"こくさいかんけい", ro:"kokusaikankee", it:"relazioni internazionali"},
+    {jp:"コンピューター", ro:"konpyuutaa", it:"informatica"},
+    {jp:"せいじ", ro:"seiji", it:"politica"},
+    {jp:"せいぶつがく", ro:"seebutsugaku", it:"biologia"},
+    {jp:"ビジネス", ro:"bijinesu", it:"business"},
+    {jp:"ぶんがく", ro:"bungaku", it:"letteratura"},
+    {jp:"れきし", ro:"rekishi", it:"storia"},
+    {jp:"いしゃ", ro:"isha", it:"medico"},
+    {jp:"かいしゃいん", ro:"kaishain", it:"impiegato/a"},
+    {jp:"かんごし", ro:"kangoshi", it:"infermiere/a"},
+    {jp:"こうこうせい", ro:"koukoosee", it:"studente liceale"},
+    {jp:"しゅふ", ro:"shufu", it:"casalinga"},
+    {jp:"だいがくいんせい", ro:"daigakuinsee", it:"studente laureato / dottorando"},
+    {jp:"べんごし", ro:"bengoshi", it:"avvocato"},
+    {jp:"おかあさん", ro:"okaasan", it:"madre"},
+    {jp:"おとうさん", ro:"otoosan", it:"padre"},
+    {jp:"おねえさん", ro:"oneesan", it:"sorella maggiore"},
+    {jp:"おにいさん", ro:"oniisan", it:"fratello maggiore"},
+    {jp:"いもうと", ro:"imooto", it:"sorella minore"},
+    {jp:"おとうと", ro:"otooto", it:"fratello minore"}
+  ]
+  // Le prossime lezioni si aggiungono qui come lezione2, lezione3, ecc.
+};
+// ==============================================================================
+
+const STORAGE_KEY = "genki_quiz_history";
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+
+function saveResult(score, total) {
+  const history = loadHistory();
+  history.unshift({ date: new Date().toLocaleDateString('it-IT'), score, total });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(0, 10)));
+}
+
+let state = {
+  screen: "setup",
+  totalWords: 20,
+  questions: [],
+  idx: 0,
+  score: 0,
+  answered: false
+};
+
+function buildQuestions(n) {
+  const pool = VOCAB.lezione1;
+  const words = shuffle(pool).slice(0, Math.min(n, pool.length));
+  return words.map(w => {
+    const dir = Math.random() < 0.5 ? "jp2it" : "it2jp";
+    const key = dir === "jp2it" ? "it" : "jp";
+    const otherPool = pool.filter(p => p[key] !== w[key]);
+    const distractors = shuffle(otherPool).slice(0, 3).map(p => p[key]);
+    const options = shuffle([w[key], ...distractors]);
+    return { word: w, dir, options };
+  });
+}
+
+function render() {
+  const app = document.getElementById("app");
+  const max = VOCAB.lezione1.length;
+
+  if (state.screen === "setup") {
+    const history = loadHistory();
+    app.innerHTML = `
+      <h1>Genki I &mdash; Quiz Vocabolario</h1>
+      <p class="subtitle">Lezione 1 &middot; ${max} vocaboli disponibili</p>
+      <div class="card">
+        <label for="numWords">Quanti vocaboli vuoi testare?</label>
+        <input type="number" id="numWords" min="5" max="${max}" value="${Math.min(state.totalWords, max)}">
+        <button id="startBtn">Inizia il quiz</button>
+      </div>
+      ${history.length ? `
+      <div class="card">
+        <div style="font-size:14px; font-weight:600; margin-bottom:8px;">Cronologia</div>
+        <div class="history">
+          ${history.map(h => `<div class="history-row"><span>${h.date}</span><span>${h.score} / ${h.total}</span></div>`).join("")}
+        </div>
+      </div>` : ""}
+    `;
+    document.getElementById("startBtn").onclick = () => {
+      const input = document.getElementById("numWords");
+      let n = parseInt(input.value, 10);
+      if (!n || n < 1) n = 5;
+      if (n > max) n = max;
+      state.totalWords = n;
+      state.questions = buildQuestions(n);
+      state.idx = 0;
+      state.score = 0;
+      state.answered = false;
+      state.screen = "quiz";
+      render();
+    };
+    return;
+  }
+
+  if (state.screen === "quiz") {
+    const q = state.questions[state.idx];
+    const isJp2It = q.dir === "jp2it";
+    const questionText = isJp2It ? q.word.jp : q.word.it;
+    const correctKey = isJp2It ? "it" : "jp";
+
+    app.innerHTML = `
+      <div class="progress">
+        <span>Domanda ${state.idx + 1} / ${state.questions.length}</span>
+        <span>Punteggio: ${state.score}</span>
+      </div>
+      <div class="question-box">
+        <p class="question-hint">${isJp2It ? "Cosa significa?" : "Come si dice in giapponese?"}</p>
+        <p class="question-text">${questionText}</p>
+        ${isJp2It ? `<p class="question-sub">${q.word.ro}</p>` : ""}
+      </div>
+      <div id="options"></div>
+      <div class="feedback" id="feedback"></div>
+      <button id="nextBtn" class="hidden">Prossima domanda</button>
+    `;
+
+    const optsDiv = document.getElementById("options");
+    q.options.forEach(opt => {
+      const btn = document.createElement("button");
+      btn.className = "option";
+      btn.textContent = opt;
+      btn.onclick = () => {
+        if (state.answered) return;
+        state.answered = true;
+        const isCorrect = opt === q.word[correctKey];
+        const feedback = document.getElementById("feedback");
+        if (isCorrect) {
+          btn.classList.add("correct");
+          state.score++;
+          feedback.textContent = "Corretto!";
+          feedback.className = "feedback correct";
+        } else {
+          btn.classList.add("wrong");
+          feedback.textContent = `Sbagliato — risposta giusta: ${q.word[correctKey]}`;
+          feedback.className = "feedback wrong";
+          [...optsDiv.children].forEach(c => {
+            if (c.textContent === q.word[correctKey]) c.classList.add("correct");
+          });
+        }
+        document.getElementById("nextBtn").classList.remove("hidden");
+      };
+      optsDiv.appendChild(btn);
+    });
+
+    document.getElementById("nextBtn").onclick = () => {
+      if (state.idx + 1 >= state.questions.length) {
+        saveResult(state.score, state.questions.length);
+        state.screen = "results";
+      } else {
+        state.idx++;
+        state.answered = false;
+      }
+      render();
+    };
+    return;
+  }
+
+  if (state.screen === "results") {
+    const pct = Math.round((state.score / state.questions.length) * 100);
+    app.innerHTML = `
+      <h1>Risultati</h1>
+      <div class="card">
+        <div class="score-big">${state.score} / ${state.questions.length}</div>
+        <div class="score-label">${pct}% corrette</div>
+        <button id="retryBtn">Rifai con nuove parole</button>
+        <div style="height:10px"></div>
+        <button id="menuBtn" class="secondary">Torna al menu</button>
+      </div>
+    `;
+    document.getElementById("retryBtn").onclick = () => {
+      state.questions = buildQuestions(state.totalWords);
+      state.idx = 0;
+      state.score = 0;
+      state.answered = false;
+      state.screen = "quiz";
+      render();
+    };
+    document.getElementById("menuBtn").onclick = () => {
+      state.screen = "setup";
+      render();
+    };
+    return;
+  }
+}
+
+render();
+</script>
+</body>
+</html>
