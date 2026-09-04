@@ -161,74 +161,19 @@
 <body>
 <div id="app"></div>
 
+<script src="data-vocab.js"></script>
+<script src="data-kanji.js"></script>
+<script src="data-grammar.js"></script>
 <script>
-// ===================== DATABASE VOCABOLARIO - LEZIONE 1 =====================
-const VOCAB = {
-  lezione1: [
-    {jp:"だいがく", ro:"daigaku", it:"università"},
-    {jp:"こうこう", ro:"koukou", it:"liceo"},
-    {jp:"がくせい", ro:"gakusee", it:"studente"},
-    {jp:"だいがくせい", ro:"daigakusee", it:"studente universitario"},
-    {jp:"りゅうがくせい", ro:"ryuugakusee", it:"studente straniero"},
-    {jp:"せんせい", ro:"sensee", it:"insegnante / professore"},
-    {jp:"いちねんせい", ro:"ichinensee", it:"studente del primo anno"},
-    {jp:"せんこう", ro:"senkoo", it:"materia di specializzazione"},
-    {jp:"わたし", ro:"watashi", it:"io"},
-    {jp:"ともだち", ro:"tomodachi", it:"amico/a"},
-    {jp:"にほんじん", ro:"nihonjin", it:"giapponese (persona)"},
-    {jp:"いま", ro:"ima", it:"adesso"},
-    {jp:"ごぜん", ro:"gozen", it:"mattina (A.M.)"},
-    {jp:"ごご", ro:"gogo", it:"pomeriggio (P.M.)"},
-    {jp:"いちじ", ro:"ichiji", it:"l'una (in punto)"},
-    {jp:"はん", ro:"han", it:"mezza"},
-    {jp:"にじはん", ro:"nijihan", it:"le due e mezza"},
-    {jp:"にほん", ro:"Nihon", it:"Giappone"},
-    {jp:"アメリカ", ro:"Amerika", it:"Stati Uniti"},
-    {jp:"にほんご", ro:"nihongo", it:"lingua giapponese"},
-    {jp:"でんわ", ro:"denwa", it:"telefono"},
-    {jp:"ばんごう", ro:"bangoo", it:"numero"},
-    {jp:"なまえ", ro:"namae", it:"nome"},
-    {jp:"なに", ro:"nani", it:"cosa"},
-    {jp:"あのう", ro:"anoo", it:"ehm..."},
-    {jp:"はい", ro:"hai", it:"sì"},
-    {jp:"そうです", ro:"soo desu", it:"è così / esatto"},
-    {jp:"そうですか", ro:"soo desu ka", it:"ah sì? / davvero?"},
-    {jp:"イギリス", ro:"Igirisu", it:"Regno Unito"},
-    {jp:"オーストラリア", ro:"Oosutoraria", it:"Australia"},
-    {jp:"かんこく", ro:"Kankoku", it:"Corea"},
-    {jp:"カナダ", ro:"Kanada", it:"Canada"},
-    {jp:"ちゅうごく", ro:"Chuugoku", it:"Cina"},
-    {jp:"インド", ro:"Indo", it:"India"},
-    {jp:"エジプト", ro:"Ejiputo", it:"Egitto"},
-    {jp:"フィリピン", ro:"Firipin", it:"Filippine"},
-    {jp:"けいざい", ro:"keezai", it:"economia"},
-    {jp:"こうがく", ro:"koogaku", it:"ingegneria"},
-    {jp:"こくさいかんけい", ro:"kokusaikankee", it:"relazioni internazionali"},
-    {jp:"コンピューター", ro:"konpyuutaa", it:"informatica"},
-    {jp:"せいじ", ro:"seiji", it:"politica"},
-    {jp:"せいぶつがく", ro:"seebutsugaku", it:"biologia"},
-    {jp:"ビジネス", ro:"bijinesu", it:"business"},
-    {jp:"ぶんがく", ro:"bungaku", it:"letteratura"},
-    {jp:"れきし", ro:"rekishi", it:"storia"},
-    {jp:"いしゃ", ro:"isha", it:"medico"},
-    {jp:"かいしゃいん", ro:"kaishain", it:"impiegato/a"},
-    {jp:"かんごし", ro:"kangoshi", it:"infermiere/a"},
-    {jp:"こうこうせい", ro:"koukoosee", it:"studente liceale"},
-    {jp:"しゅふ", ro:"shufu", it:"casalinga"},
-    {jp:"だいがくいんせい", ro:"daigakuinsee", it:"studente laureato / dottorando"},
-    {jp:"べんごし", ro:"bengoshi", it:"avvocato"},
-    {jp:"おかあさん", ro:"okaasan", it:"madre"},
-    {jp:"おとうさん", ro:"otoosan", it:"padre"},
-    {jp:"おねえさん", ro:"oneesan", it:"sorella maggiore"},
-    {jp:"おにいさん", ro:"oniisan", it:"fratello maggiore"},
-    {jp:"いもうと", ro:"imooto", it:"sorella minore"},
-    {jp:"おとうと", ro:"otooto", it:"fratello minore"}
-  ]
-  // Le prossime lezioni si aggiungono qui come lezione2, lezione3, ecc.
-};
-// ==============================================================================
-
+// ===================== MOTORE DEL QUIZ =====================
+// I database (vocabolario, kanji, grammatica) sono caricati dai file
+// data-vocab.js, data-kanji.js, data-grammar.js prima di questo script.
 const STORAGE_KEY = "genki_quiz_history";
+
+// Formatta una parola come "かな (漢字)" se ha il kanji, altrimenti solo "かな"
+function jpLabel(word) {
+  return word.kanji ? `${word.jp} (${word.kanji})` : word.jp;
+}
 
 function shuffle(arr) {
   const a = [...arr];
@@ -246,67 +191,163 @@ function loadHistory() {
   } catch (e) { return []; }
 }
 
-function saveResult(score, total) {
+function saveResult(mode, score, total) {
   const history = loadHistory();
-  history.unshift({ date: new Date().toLocaleDateString('it-IT'), score, total });
+  history.unshift({ date: new Date().toLocaleDateString('it-IT'), mode, score, total });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(0, 10)));
 }
 
 let state = {
-  screen: "setup",
-  totalWords: 20,
+  screen: "mode",
+  mode: "vocab",      // "vocab" | "kanji"
+  totalItems: 20,
   questions: [],
   idx: 0,
   score: 0,
   answered: false
 };
 
-function buildQuestions(n) {
-  const pool = VOCAB.lezione1;
+// Costruisce N domande di vocabolario (kana/kanji <-> italiano)
+function buildVocabQuestions(n) {
+  const pool = VOCAB_ALL;
   const words = shuffle(pool).slice(0, Math.min(n, pool.length));
   return words.map(w => {
     const dir = Math.random() < 0.5 ? "jp2it" : "it2jp";
-    const key = dir === "jp2it" ? "it" : "jp";
-    const otherPool = pool.filter(p => p[key] !== w[key]);
-    const distractors = shuffle(otherPool).slice(0, 3).map(p => p[key]);
-    const options = shuffle([w[key], ...distractors]);
-    return { word: w, dir, options };
+    const valueOf = (p) => dir === "jp2it" ? p.it : jpLabel(p);
+    const correctValue = valueOf(w);
+    const otherPool = pool.filter(p => valueOf(p) !== correctValue);
+    const distractors = shuffle(otherPool).slice(0, 3).map(valueOf);
+    const options = shuffle([correctValue, ...distractors]);
+    return {
+      promptLabel: dir === "jp2it" ? "Cosa significa?" : "Come si dice in giapponese?",
+      mainText: dir === "jp2it" ? jpLabel(w) : w.it,
+      hintText: dir === "jp2it" ? w.ro : null,
+      correctValue,
+      options
+    };
   });
+}
+
+// Domande tipo 1: mostra il kanji da solo, risposta = lettura (on/kun) + significato
+function buildKanjiReadingQuestions(pool, count) {
+  const chosen = shuffle(pool).slice(0, count);
+  return chosen.map(k => {
+    const valueOf = (p) => `${p.onkun} — ${p.meaning}`;
+    const correctValue = valueOf(k);
+    const otherPool = pool.filter(p => p !== k);
+    const distractors = shuffle(otherPool).slice(0, 3).map(valueOf);
+    const options = shuffle([correctValue, ...distractors]);
+    return {
+      promptLabel: "Qual è la lettura e il significato di questo kanji?",
+      mainText: k.kanji,
+      hintText: null,
+      correctValue,
+      options
+    };
+  });
+}
+
+// Domande tipo 2: mostra una parola di esempio con quel kanji, risposta = traduzione italiana
+function buildKanjiExampleQuestions(pool, count) {
+  // Costruisce un pool piatto di tutti gli esempi di tutti i kanji
+  const allExamples = pool.flatMap(k => k.examples);
+  const chosen = shuffle(allExamples).slice(0, count);
+  return chosen.map(ex => {
+    const correctValue = ex.it;
+    const otherPool = allExamples.filter(e => e.it !== correctValue);
+    const distractors = shuffle(otherPool).slice(0, 3).map(e => e.it);
+    const options = shuffle([correctValue, ...distractors]);
+    return {
+      promptLabel: "Cosa significa questa parola?",
+      mainText: `${ex.word} (${ex.reading})`,
+      hintText: null,
+      correctValue,
+      options
+    };
+  });
+}
+
+// Costruisce N domande sui kanji, mescolando i due tipi
+function buildKanjiQuestions(n) {
+  const pool = KANJI_ALL;
+  const half = Math.round(n / 2);
+  const readingQs = buildKanjiReadingQuestions(pool, half);
+  const exampleQs = buildKanjiExampleQuestions(pool, n - half);
+  return shuffle([...readingQs, ...exampleQs]);
+}
+
+
+function buildQuestions(mode, n) {
+  return mode === "kanji" ? buildKanjiQuestions(n) : buildVocabQuestions(n);
+}
+
+function modeTitle(mode) {
+  return mode === "kanji" ? "Kanji" : "Vocabolario";
 }
 
 function render() {
   const app = document.getElementById("app");
-  const max = VOCAB.lezione1.length;
+  const vocabMax = VOCAB_ALL.length;
+  const kanjiMax = KANJI_ALL.length * 2; // metà domande "lettura", metà domande "esempio"
+
+  if (state.screen === "mode") {
+    app.innerHTML = `
+      <h1>Genki I &mdash; Quiz</h1>
+      <p class="subtitle">Lezioni 1-10 (vocab) &middot; 3-7 (kanji) &middot; scegli cosa allenare</p>
+      <div class="card">
+        <button id="vocabBtn">Vocabolario (${vocabMax} parole)</button>
+        <div style="height:10px"></div>
+        <button id="kanjiBtn" class="secondary">Kanji (${KANJI_ALL.length} kanji, Lez. 3-7)</button>
+      </div>
+    `;
+    document.getElementById("vocabBtn").onclick = () => {
+      state.mode = "vocab";
+      state.screen = "setup";
+      render();
+    };
+    document.getElementById("kanjiBtn").onclick = () => {
+      state.mode = "kanji";
+      state.screen = "setup";
+      render();
+    };
+    return;
+  }
 
   if (state.screen === "setup") {
-    const history = loadHistory();
+    const max = state.mode === "kanji" ? kanjiMax : vocabMax;
+    const history = loadHistory().filter(h => (h.mode || "Vocabolario") === modeTitle(state.mode));
     app.innerHTML = `
-      <h1>Genki I &mdash; Quiz Vocabolario</h1>
-      <p class="subtitle">Lezione 1 &middot; ${max} vocaboli disponibili</p>
+      <h1>Genki I &mdash; ${modeTitle(state.mode)}</h1>
+      <p class="subtitle">${state.mode === "kanji" ? "Lezioni 3-7" : "Lezioni 1-10"} &middot; ${state.mode === "kanji" ? KANJI_ALL.length + " kanji disponibili" : max + " vocaboli disponibili"}</p>
       <div class="card">
-        <label for="numWords">Quanti vocaboli vuoi testare?</label>
-        <input type="number" id="numWords" min="5" max="${max}" value="${Math.min(state.totalWords, max)}">
+        <label for="numItems">${state.mode === "kanji" ? "Quante domande vuoi (lettura + esempi)?" : "Quanti vocaboli vuoi testare?"}</label>
+        <input type="number" id="numItems" min="4" max="${max}" value="${Math.min(state.totalItems, max)}">
         <button id="startBtn">Inizia il quiz</button>
       </div>
       ${history.length ? `
       <div class="card">
-        <div style="font-size:14px; font-weight:600; margin-bottom:8px;">Cronologia</div>
+        <div style="font-size:14px; font-weight:600; margin-bottom:8px;">Cronologia (${modeTitle(state.mode)})</div>
         <div class="history">
           ${history.map(h => `<div class="history-row"><span>${h.date}</span><span>${h.score} / ${h.total}</span></div>`).join("")}
         </div>
       </div>` : ""}
+      <button id="backBtn" class="secondary">&larr; Torna al menu</button>
     `;
     document.getElementById("startBtn").onclick = () => {
-      const input = document.getElementById("numWords");
+      const input = document.getElementById("numItems");
       let n = parseInt(input.value, 10);
       if (!n || n < 1) n = 5;
       if (n > max) n = max;
-      state.totalWords = n;
-      state.questions = buildQuestions(n);
+      state.totalItems = n;
+      state.questions = buildQuestions(state.mode, n);
       state.idx = 0;
       state.score = 0;
       state.answered = false;
       state.screen = "quiz";
+      render();
+    };
+    document.getElementById("backBtn").onclick = () => {
+      state.screen = "mode";
       render();
     };
     return;
@@ -314,9 +355,6 @@ function render() {
 
   if (state.screen === "quiz") {
     const q = state.questions[state.idx];
-    const isJp2It = q.dir === "jp2it";
-    const questionText = isJp2It ? q.word.jp : q.word.it;
-    const correctKey = isJp2It ? "it" : "jp";
 
     app.innerHTML = `
       <div class="progress">
@@ -324,9 +362,9 @@ function render() {
         <span>Punteggio: ${state.score}</span>
       </div>
       <div class="question-box">
-        <p class="question-hint">${isJp2It ? "Cosa significa?" : "Come si dice in giapponese?"}</p>
-        <p class="question-text">${questionText}</p>
-        ${isJp2It ? `<p class="question-sub">${q.word.ro}</p>` : ""}
+        <p class="question-hint">${q.promptLabel}</p>
+        <p class="question-text">${q.mainText}</p>
+        ${q.hintText ? `<p class="question-sub">${q.hintText}</p>` : ""}
       </div>
       <div id="options"></div>
       <div class="feedback" id="feedback"></div>
@@ -341,7 +379,7 @@ function render() {
       btn.onclick = () => {
         if (state.answered) return;
         state.answered = true;
-        const isCorrect = opt === q.word[correctKey];
+        const isCorrect = opt === q.correctValue;
         const feedback = document.getElementById("feedback");
         if (isCorrect) {
           btn.classList.add("correct");
@@ -350,10 +388,10 @@ function render() {
           feedback.className = "feedback correct";
         } else {
           btn.classList.add("wrong");
-          feedback.textContent = `Sbagliato — risposta giusta: ${q.word[correctKey]}`;
+          feedback.textContent = `Sbagliato — risposta giusta: ${q.correctValue}`;
           feedback.className = "feedback wrong";
           [...optsDiv.children].forEach(c => {
-            if (c.textContent === q.word[correctKey]) c.classList.add("correct");
+            if (c.textContent === q.correctValue) c.classList.add("correct");
           });
         }
         document.getElementById("nextBtn").classList.remove("hidden");
@@ -363,7 +401,7 @@ function render() {
 
     document.getElementById("nextBtn").onclick = () => {
       if (state.idx + 1 >= state.questions.length) {
-        saveResult(state.score, state.questions.length);
+        saveResult(modeTitle(state.mode), state.score, state.questions.length);
         state.screen = "results";
       } else {
         state.idx++;
@@ -377,25 +415,31 @@ function render() {
   if (state.screen === "results") {
     const pct = Math.round((state.score / state.questions.length) * 100);
     app.innerHTML = `
-      <h1>Risultati</h1>
+      <h1>Risultati &mdash; ${modeTitle(state.mode)}</h1>
       <div class="card">
         <div class="score-big">${state.score} / ${state.questions.length}</div>
         <div class="score-label">${pct}% corrette</div>
-        <button id="retryBtn">Rifai con nuove parole</button>
+        <button id="retryBtn">Rifai con nuove domande</button>
+        <div style="height:10px"></div>
+        <button id="setupBtn" class="secondary">Cambia numero di domande</button>
         <div style="height:10px"></div>
         <button id="menuBtn" class="secondary">Torna al menu</button>
       </div>
     `;
     document.getElementById("retryBtn").onclick = () => {
-      state.questions = buildQuestions(state.totalWords);
+      state.questions = buildQuestions(state.mode, state.totalItems);
       state.idx = 0;
       state.score = 0;
       state.answered = false;
       state.screen = "quiz";
       render();
     };
-    document.getElementById("menuBtn").onclick = () => {
+    document.getElementById("setupBtn").onclick = () => {
       state.screen = "setup";
+      render();
+    };
+    document.getElementById("menuBtn").onclick = () => {
+      state.screen = "mode";
       render();
     };
     return;
