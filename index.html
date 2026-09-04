@@ -278,15 +278,20 @@ function buildKanjiQuestions(n) {
 }
 
 // ===================== CONIUGAZIONE (verbi e aggettivi) =====================
+// Ogni verbo/aggettivo pescato genera un GRUPPO di 3 domande fisse e collegate:
+//  1) che tipo è (ru/u/irregolare oppure い/な)
+//  2) una forma coniugata a caso (tra quelle con un significato proprio, quindi mai て)
+//  3) cosa significa quella forma
+// Il gruppo conta come UNA sola "domanda" nel conteggio totale scelto dall'utente.
 const VERB_TYPE_LABELS = { ru: "ru-verbo", u: "u-verbo", irr: "irregolare" };
 const ADJ_TYPE_LABELS = { i: "い-aggettivo", na: "な-aggettivo" };
 
+// Solo forme con un significato proprio isolato: て è esclusa (va bene come distrattore, non come target)
 const VERB_FORM_DEFS = [
   { key: "masu", label: "Qual è la forma presente affermativa (educata)?" },
   { key: "masen", label: "Qual è la forma presente negativa (educata)?" },
   { key: "mashita", label: "Qual è la forma passata affermativa (educata)?" },
   { key: "masendeshita", label: "Qual è la forma passata negativa (educata)?" },
-  { key: "te", label: "Qual è la forma che usi per collegare due azioni o fare una richiesta (es. + ください)?" },
   { key: "ta", label: "Qual è la forma del passato informale (quella che usi con gli amici)?" }
 ];
 
@@ -294,44 +299,34 @@ const ADJ_FORM_DEFS = [
   { key: "pres_aff", label: "Qual è la forma presente affermativa?" },
   { key: "pres_neg", label: "Qual è la forma presente negativa?" },
   { key: "past_aff", label: "Qual è la forma passata affermativa?" },
-  { key: "past_neg", label: "Qual è la forma passata negativa?" },
-  { key: "te", label: "Qual è la forma che usi per collegare due aggettivi o due frasi?" }
+  { key: "past_neg", label: "Qual è la forma passata negativa?" }
 ];
 
-function buildVerbTypeQuestion() {
-  const w = VERBS_ALL[Math.floor(Math.random() * VERBS_ALL.length)];
-  return {
+// Costruisce le 3 domande per UN singolo verbo
+function buildVerbGroup(w) {
+  const typeQ = {
     promptLabel: "Che tipo di verbo è questo?",
     mainText: jpLabel(w),
     hintText: null,
     correctValue: VERB_TYPE_LABELS[w.type],
     options: shuffle(Object.values(VERB_TYPE_LABELS))
   };
-}
 
-// Le opzioni sono SEMPRE le forme dello stesso verbo (trabocchetti), mai di verbi diversi:
-// così bisogna sapere davvero quale forma è quale, non solo riconoscere lo stile di lettura.
-// Ritorna un ARRAY: [domanda sulla forma, domanda sul significato di quella forma]
-// (la seconda è omessa se la forma non ha un significato proprio, es. て)
-function buildVerbFormQuestionPair() {
   const def = VERB_FORM_DEFS[Math.floor(Math.random() * VERB_FORM_DEFS.length)];
-  const pool = VERBS_ALL.filter(w => w.forms[def.key]);
-  const w = pool[Math.floor(Math.random() * pool.length)];
   const correct = w.forms[def.key];
+  // distrattori: le ALTRE forme dello stesso verbo (te-form inclusa, come trabocchetto)
   const allForms = Object.keys(w.forms).filter(k => k !== def.key).map(k => w.forms[k]);
   const uniqueOtherForms = [...new Set(allForms)].filter(v => v !== correct);
-  const distractors = shuffle(uniqueOtherForms).slice(0, 3);
+  const formDistractors = shuffle(uniqueOtherForms).slice(0, 3);
   const formQ = {
     promptLabel: def.label,
     mainText: jpLabel(w),
     hintText: null,
     correctValue: correct,
-    options: shuffle([correct, ...distractors])
+    options: shuffle([correct, ...formDistractors])
   };
 
   const meaning = w.meanings[def.key];
-  if (!meaning) return [formQ]; // es. forma て: non ha un significato proprio isolato
-
   const allMeanings = Object.keys(w.meanings).filter(k => k !== def.key && w.meanings[k]).map(k => w.meanings[k]);
   const uniqueOtherMeanings = [...new Set(allMeanings)].filter(v => v !== meaning);
   const meaningDistractors = shuffle(uniqueOtherMeanings).slice(0, 3);
@@ -342,40 +337,34 @@ function buildVerbFormQuestionPair() {
     correctValue: meaning,
     options: shuffle([meaning, ...meaningDistractors])
   };
-  return [formQ, meaningQ];
+
+  return [typeQ, formQ, meaningQ];
 }
 
-function buildAdjTypeQuestion() {
-  const w = ADJECTIVES_ALL[Math.floor(Math.random() * ADJECTIVES_ALL.length)];
-  return {
+// Costruisce le 3 domande per UN singolo aggettivo
+function buildAdjGroup(w) {
+  const typeQ = {
     promptLabel: "Che tipo di aggettivo è questo?",
     mainText: jpLabel(w),
     hintText: null,
     correctValue: ADJ_TYPE_LABELS[w.type],
     options: shuffle(Object.values(ADJ_TYPE_LABELS))
   };
-}
 
-// Stesso principio del verbo: distrattori dalla stessa parola, e domanda di significato collegata.
-function buildAdjFormQuestionPair() {
   const def = ADJ_FORM_DEFS[Math.floor(Math.random() * ADJ_FORM_DEFS.length)];
-  const pool = ADJECTIVES_ALL.filter(w => w.forms[def.key]);
-  const w = pool[Math.floor(Math.random() * pool.length)];
   const correct = w.forms[def.key];
   const allForms = Object.keys(w.forms).filter(k => k !== def.key).map(k => w.forms[k]);
   const uniqueOtherForms = [...new Set(allForms)].filter(v => v !== correct);
-  const distractors = shuffle(uniqueOtherForms).slice(0, 3);
+  const formDistractors = shuffle(uniqueOtherForms).slice(0, 3);
   const formQ = {
     promptLabel: def.label,
     mainText: jpLabel(w),
     hintText: null,
     correctValue: correct,
-    options: shuffle([correct, ...distractors])
+    options: shuffle([correct, ...formDistractors])
   };
 
   const meaning = w.meanings[def.key];
-  if (!meaning) return [formQ]; // es. forma て: non ha un significato proprio isolato
-
   const allMeanings = Object.keys(w.meanings).filter(k => k !== def.key && w.meanings[k]).map(k => w.meanings[k]);
   const uniqueOtherMeanings = [...new Set(allMeanings)].filter(v => v !== meaning);
   const meaningDistractors = shuffle(uniqueOtherMeanings).slice(0, 3);
@@ -386,24 +375,28 @@ function buildAdjFormQuestionPair() {
     correctValue: meaning,
     options: shuffle([meaning, ...meaningDistractors])
   };
-  return [formQ, meaningQ];
+
+  return [typeQ, formQ, meaningQ];
 }
 
-// Costruisce N domande di coniugazione, mescolando le 4 categorie.
-// Le domande di forma sono seguite dalla domanda di significato collegata (stesso "slot").
+// Costruisce N gruppi (N = quanti verbi/aggettivi, scelto dall'utente), mai ripetuti nella stessa sessione.
+// Ogni gruppo produce sempre 3 domande consecutive; il conteggio "Domanda X/N" mostrato
+// all'utente si riferisce al numero di GRUPPI, non al numero di domande individuali.
 function buildConjugationQuestions(n) {
-  const builders = [
-    () => [buildVerbTypeQuestion()],
-    buildVerbFormQuestionPair,
-    () => [buildAdjTypeQuestion()],
-    buildAdjFormQuestionPair
+  const combined = [
+    ...VERBS_ALL.map(w => ({ w, kind: "verb" })),
+    ...ADJECTIVES_ALL.map(w => ({ w, kind: "adj" }))
   ];
-  const results = [];
-  while (results.length < n) {
-    const builder = builders[Math.floor(Math.random() * builders.length)];
-    results.push(...builder());
-  }
-  return results;
+  const chosen = shuffle(combined).slice(0, Math.min(n, combined.length));
+  const groups = chosen.map(item => item.kind === "verb" ? buildVerbGroup(item.w) : buildAdjGroup(item.w));
+
+  const flat = [];
+  groups.forEach((steps, gi) => {
+    steps.forEach((step, si) => {
+      flat.push({ ...step, groupIndex: gi + 1, groupTotal: groups.length, stepInGroup: si + 1, stepsInGroup: 3 });
+    });
+  });
+  return flat;
 }
 // ==============================================================================
 
@@ -468,10 +461,10 @@ function render() {
     conj: {
       title: "Coniugazione",
       lessons: "Lezioni 3-10",
-      max: 60,
+      max: VERBS_ALL.length + ADJECTIVES_ALL.length,
       menuLabel: `Coniugazione (${VERBS_ALL.length} verbi, ${ADJECTIVES_ALL.length} aggettivi)`,
       countLabel: `${VERBS_ALL.length} verbi e ${ADJECTIVES_ALL.length} aggettivi disponibili`,
-      setupQuestion: "Quante domande di coniugazione vuoi?"
+      setupQuestion: "Quanti verbi/aggettivi vuoi ripassare? (ognuno = 3 domande: tipo, forma, significato)"
     }
   };
 
@@ -542,10 +535,13 @@ function render() {
 
   if (state.screen === "quiz") {
     const q = state.questions[state.idx];
+    const progressLabel = q.groupIndex
+      ? `Parola ${q.groupIndex} / ${q.groupTotal} &middot; passo ${q.stepInGroup}/${q.stepsInGroup}`
+      : `Domanda ${state.idx + 1} / ${state.questions.length}`;
 
     app.innerHTML = `
       <div class="progress">
-        <span>Domanda ${state.idx + 1} / ${state.questions.length}</span>
+        <span>${progressLabel}</span>
         <span>Punteggio: ${state.score}</span>
       </div>
       <div class="question-box">
