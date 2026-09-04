@@ -302,6 +302,53 @@ const ADJ_FORM_DEFS = [
   { key: "past_neg", label: "Qual è la forma passata negativa?" }
 ];
 
+function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Domanda sull'USO della forma て (non sul suo "significato", che non esiste in isolamento):
+// mostra la forma て inserita in una delle 4 costruzioni tipiche e chiede cosa significa la frase risultante.
+function buildTeUsageQuestion(w) {
+  const patterns = ["sequence", "request", "permission", "progressive"];
+  const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+
+  if (pattern === "sequence") {
+    const others = VERBS_ALL.filter(v => v !== w && v.teUses);
+    const w2 = others[Math.floor(Math.random() * others.length)];
+    const mainText = w.forms.te + "、" + w2.forms.masu + "。";
+    const correctValue = capitalize(w.meanings.masu) + " e poi " + w2.meanings.masu;
+    const swapped = capitalize(w2.meanings.masu) + " e poi " + w.meanings.masu;
+    const others2 = VERBS_ALL.filter(v => v.teUses && v !== w && v !== w2);
+    const extra = shuffle(others2).slice(0, 2);
+    const distractor2 = capitalize(w.meanings.masu) + " e poi " + (extra[0] ? extra[0].meanings.masu : w2.meanings.masen);
+    const distractor3 = capitalize((extra[1] || extra[0] || w2).meanings.masu) + " e poi " + w2.meanings.masu;
+    const options = shuffle([...new Set([correctValue, swapped, distractor2, distractor3])]);
+    return {
+      promptLabel: "Cosa significa questa frase (due azioni collegate)?",
+      mainText,
+      hintText: null,
+      correctValue,
+      options
+    };
+  }
+
+  const suffix = pattern === "request" ? "ください。" : pattern === "permission" ? "もいいです。" : "いる。";
+  const mainText = w.forms.te + suffix;
+  const correctValue = w.teUses[pattern];
+  const otherPool = VERBS_ALL.filter(v => v.teUses && v !== w);
+  const distractors = shuffle(otherPool).slice(0, 3).map(v => v.teUses[pattern]);
+  const promptLabel = pattern === "request" ? "Cosa significa questa richiesta?"
+    : pattern === "permission" ? "Cosa significa questo permesso?"
+    : "Cosa significa questa azione in corso?";
+  return {
+    promptLabel,
+    mainText,
+    hintText: null,
+    correctValue,
+    options: shuffle([correctValue, ...distractors])
+  };
+}
+
 // Costruisce le 3 domande per UN singolo verbo
 function buildVerbGroup(w) {
   const typeQ = {
@@ -312,9 +359,14 @@ function buildVerbGroup(w) {
     options: shuffle(Object.values(VERB_TYPE_LABELS))
   };
 
-  const def = VERB_FORM_DEFS[Math.floor(Math.random() * VERB_FORM_DEFS.length)];
+  // Se il verbo ha usi della forma て definiti (esclusi i verbi statici tipo ある/いる/ふる),
+  // て entra come sesta opzione possibile, con probabilità pari alle altre 5 forme.
+  const availableDefs = w.teUses
+    ? [...VERB_FORM_DEFS, { key: "te", label: "Qual è la forma che collega azioni o introduce richieste/permessi?" }]
+    : VERB_FORM_DEFS;
+  const def = availableDefs[Math.floor(Math.random() * availableDefs.length)];
+
   const correct = w.forms[def.key];
-  // distrattori: le ALTRE forme dello stesso verbo (te-form inclusa, come trabocchetto)
   const allForms = Object.keys(w.forms).filter(k => k !== def.key).map(k => w.forms[k]);
   const uniqueOtherForms = [...new Set(allForms)].filter(v => v !== correct);
   const formDistractors = shuffle(uniqueOtherForms).slice(0, 3);
@@ -325,6 +377,11 @@ function buildVerbGroup(w) {
     correctValue: correct,
     options: shuffle([correct, ...formDistractors])
   };
+
+  if (def.key === "te") {
+    const usageQ = buildTeUsageQuestion(w);
+    return [typeQ, formQ, usageQ];
+  }
 
   const meaning = w.meanings[def.key];
   const allMeanings = Object.keys(w.meanings).filter(k => k !== def.key && w.meanings[k]).map(k => w.meanings[k]);
