@@ -445,17 +445,25 @@ function buildAdjGroup(w) {
   return [typeQ, formQ, meaningQ];
 }
 
-// Costruisce N gruppi (N = quanti verbi/aggettivi, scelto dall'utente), mai ripetuti nella stessa sessione.
+// Costruisce N gruppi di VERBI (N = quanti verbi, scelto dall'utente), mai ripetuti nella stessa sessione.
 // Ogni gruppo produce sempre 3 domande consecutive; il conteggio "Domanda X/N" mostrato
 // all'utente si riferisce al numero di GRUPPI, non al numero di domande individuali.
-function buildConjugationQuestions(n) {
-  const combined = [
-    ...VERBS_ALL.map(w => ({ w, kind: "verb" })),
-    ...ADJECTIVES_ALL.map(w => ({ w, kind: "adj" }))
-  ];
-  const chosen = shuffle(combined).slice(0, Math.min(n, combined.length));
-  const groups = chosen.map(item => item.kind === "verb" ? buildVerbGroup(item.w) : buildAdjGroup(item.w));
+function buildVerbConjugationQuestions(n) {
+  const chosen = shuffle(VERBS_ALL).slice(0, Math.min(n, VERBS_ALL.length));
+  const groups = chosen.map(w => buildVerbGroup(w));
+  const flat = [];
+  groups.forEach((steps, gi) => {
+    steps.forEach((step, si) => {
+      flat.push({ ...step, groupIndex: gi + 1, groupTotal: groups.length, stepInGroup: si + 1, stepsInGroup: 3 });
+    });
+  });
+  return flat;
+}
 
+// Stessa logica, per gli AGGETTIVI.
+function buildAdjConjugationQuestions(n) {
+  const chosen = shuffle(ADJECTIVES_ALL).slice(0, Math.min(n, ADJECTIVES_ALL.length));
+  const groups = chosen.map(w => buildAdjGroup(w));
   const flat = [];
   groups.forEach((steps, gi) => {
     steps.forEach((step, si) => {
@@ -470,7 +478,8 @@ function buildConjugationQuestions(n) {
 function buildQuestions(mode, n) {
   if (mode === "kanji") return buildKanjiQuestions(n);
   if (mode === "grammar") return buildGrammarQuestions(n);
-  if (mode === "conj") return buildConjugationQuestions(n);
+  if (mode === "verbs") return buildVerbConjugationQuestions(n);
+  if (mode === "adjectives") return buildAdjConjugationQuestions(n);
   return buildVocabQuestions(n);
 }
 
@@ -491,7 +500,8 @@ function buildGrammarQuestions(n) {
 function modeTitle(mode) {
   if (mode === "kanji") return "Kanji";
   if (mode === "grammar") return "Grammatica";
-  if (mode === "conj") return "Coniugazione";
+  if (mode === "verbs") return "Verbi";
+  if (mode === "adjectives") return "Aggettivi";
   return "Vocabolario";
 }
 
@@ -524,13 +534,21 @@ function render() {
       countLabel: `${GRAMMAR_ALL.length} domande disponibili`,
       setupQuestion: "Quante domande di grammatica vuoi?"
     },
-    conj: {
-      title: "Coniugazione",
+    verbs: {
+      title: "Verbi",
       lessons: "Lezioni 3-10",
-      max: VERBS_ALL.length + ADJECTIVES_ALL.length,
-      menuLabel: `Coniugazione (${VERBS_ALL.length} verbi, ${ADJECTIVES_ALL.length} aggettivi)`,
-      countLabel: `${VERBS_ALL.length} verbi e ${ADJECTIVES_ALL.length} aggettivi disponibili`,
-      setupQuestion: "Quanti verbi/aggettivi vuoi ripassare? (ognuno = 3 domande: tipo, forma, significato)"
+      max: VERBS_ALL.length,
+      menuLabel: `Verbi (${VERBS_ALL.length} verbi)`,
+      countLabel: `${VERBS_ALL.length} verbi disponibili`,
+      setupQuestion: "Quanti verbi vuoi ripassare? (ognuno = 3 domande: tipo, forma, significato)"
+    },
+    adjectives: {
+      title: "Aggettivi",
+      lessons: "Lezioni 3-10",
+      max: ADJECTIVES_ALL.length,
+      menuLabel: `Aggettivi (${ADJECTIVES_ALL.length} aggettivi)`,
+      countLabel: `${ADJECTIVES_ALL.length} aggettivi disponibili`,
+      setupQuestion: "Quanti aggettivi vuoi ripassare? (ognuno = 3 domande: tipo, forma, significato)"
     }
   };
 
@@ -545,10 +563,12 @@ function render() {
         <div style="height:10px"></div>
         <button id="grammarBtn" class="secondary">${MODES.grammar.menuLabel}</button>
         <div style="height:10px"></div>
-        <button id="conjBtn" class="secondary">${MODES.conj.menuLabel}</button>
+        <button id="verbsBtn" class="secondary">${MODES.verbs.menuLabel}</button>
+        <div style="height:10px"></div>
+        <button id="adjectivesBtn" class="secondary">${MODES.adjectives.menuLabel}</button>
       </div>
     `;
-    ["vocab", "kanji", "grammar", "conj"].forEach(m => {
+    ["vocab", "kanji", "grammar", "verbs", "adjectives"].forEach(m => {
       document.getElementById(m + "Btn").onclick = () => {
         state.mode = m;
         state.screen = "setup";
