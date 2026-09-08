@@ -488,11 +488,37 @@ function buildAdjConjugationQuestions(n) {
 // ==============================================================================
 
 
+// ===================== SCRITTURA (input libero, match esatto) =====================
+// Pool combinato: Vocabolario + Verbi + Aggettivi, escludendo le voci che sono
+// suffissi/particelle legate (es. "〜ねんせい") che non ha senso scrivere da sole.
+function buildScritturaPool() {
+  const combined = [...VOCAB_ALL, ...VERBS_ALL, ...ADJECTIVES_ALL];
+  return combined.filter(w => w.jp && !w.jp.includes("〜") && !w.it.includes("..."));
+}
+
+function buildScritturaQuestions(n) {
+  const pool = buildScritturaPool();
+  const chosen = shuffle(pool).slice(0, Math.min(n, pool.length));
+  return chosen.map(w => {
+    const accepted = [w.jp, w.kanji].filter(Boolean);
+    return {
+      promptLabel: "Come si scrive in giapponese?",
+      mainText: w.it,
+      hintText: null,
+      correctValue: w.jp, // valore "principale" mostrato in caso di errore
+      acceptedAnswers: accepted, // hiragana O kanji, va bene uno dei due
+      inputType: "text"
+    };
+  });
+}
+// ==============================================================================
+
 function buildQuestions(mode, n) {
   if (mode === "kanji") return buildKanjiQuestions(n);
   if (mode === "grammar") return buildGrammarQuestions(n);
   if (mode === "verbs") return buildVerbConjugationQuestions(n);
   if (mode === "adjectives") return buildAdjConjugationQuestions(n);
+  if (mode === "scrittura") return buildScritturaQuestions(n);
   return buildVocabQuestions(n);
 }
 
@@ -515,6 +541,7 @@ function modeTitle(mode) {
   if (mode === "grammar") return "Grammatica";
   if (mode === "verbs") return "Verbi";
   if (mode === "adjectives") return "Aggettivi";
+  if (mode === "scrittura") return "Scrittura";
   return "Vocabolario";
 }
 
@@ -562,6 +589,14 @@ function render() {
       menuLabel: `Aggettivi (${ADJECTIVES_ALL.length} aggettivi)`,
       countLabel: `${ADJECTIVES_ALL.length} aggettivi disponibili`,
       setupQuestion: "Quanti aggettivi vuoi ripassare? (ognuno = 3 domande: tipo, forma, significato)"
+    },
+    scrittura: {
+      title: "Scrittura",
+      lessons: "Lezioni 1-10",
+      max: buildScritturaPool().length,
+      menuLabel: `Scrittura (${buildScritturaPool().length} parole, scrivi tu la risposta)`,
+      countLabel: `${buildScritturaPool().length} parole disponibili`,
+      setupQuestion: "Quante parole vuoi scrivere?"
     }
   };
 
@@ -579,9 +614,11 @@ function render() {
         <button id="verbsBtn" class="secondary">${MODES.verbs.menuLabel}</button>
         <div style="height:10px"></div>
         <button id="adjectivesBtn" class="secondary">${MODES.adjectives.menuLabel}</button>
+        <div style="height:10px"></div>
+        <button id="scritturaBtn" class="secondary">${MODES.scrittura.menuLabel}</button>
       </div>
     `;
-    ["vocab", "kanji", "grammar", "verbs", "adjectives"].forEach(m => {
+    ["vocab", "kanji", "grammar", "verbs", "adjectives", "scrittura"].forEach(m => {
       document.getElementById(m + "Btn").onclick = () => {
         state.mode = m;
         state.screen = "setup";
@@ -637,6 +674,66 @@ function render() {
     const progressLabel = q.groupIndex
       ? `Parola ${q.groupIndex} / ${q.groupTotal} &middot; passo ${q.stepInGroup}/${q.stepsInGroup}`
       : `Domanda ${state.idx + 1} / ${state.questions.length}`;
+
+    if (q.inputType === "text") {
+      app.innerHTML = `
+        <div class="progress">
+          <span>${progressLabel}</span>
+          <span>Punteggio: ${state.score}</span>
+        </div>
+        <div class="question-box">
+          <p class="question-hint">${q.promptLabel}</p>
+          <p class="question-text">${q.mainText}</p>
+        </div>
+        <input type="text" id="textAnswer" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+          placeholder="Scrivi qui in hiragana o kanji..."
+          style="width:100%; padding:14px; font-size:18px; border-radius:10px; border:1.5px solid #e0ddd6; margin-bottom:12px;">
+        <button id="submitBtn">Controlla</button>
+        <div class="feedback" id="feedback"></div>
+        <button id="nextBtn" class="hidden">Prossima domanda</button>
+      `;
+
+      const input = document.getElementById("textAnswer");
+      input.focus();
+
+      const checkAnswer = () => {
+        if (state.answered) return;
+        const typed = input.value.trim();
+        if (!typed) return;
+        state.answered = true;
+        input.disabled = true;
+        document.getElementById("submitBtn").disabled = true;
+        const isCorrect = q.acceptedAnswers.includes(typed);
+        const feedback = document.getElementById("feedback");
+        if (isCorrect) {
+          state.score++;
+          feedback.textContent = "Corretto!";
+          feedback.className = "feedback correct";
+        } else {
+          const alt = q.acceptedAnswers.join(" / ");
+          feedback.textContent = `Sbagliato — risposta giusta: ${alt}`;
+          feedback.className = "feedback wrong";
+        }
+        document.getElementById("nextBtn").classList.remove("hidden");
+      };
+
+      document.getElementById("submitBtn").onclick = checkAnswer;
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") checkAnswer();
+      });
+
+      document.getElementById("nextBtn").onclick = () => {
+        if (state.idx + 1 >= state.questions.length) {
+          saveResult(modeTitle(state.mode), state.score, state.questions.length);
+          state.screen = "results";
+        } else {
+          state.idx++;
+          state.answered = false;
+        }
+        render();
+      };
+      return;
+    }
 
     app.innerHTML = `
       <div class="progress">
