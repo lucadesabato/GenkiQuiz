@@ -415,10 +415,452 @@ const KANJI_L7 = [
   ]}
 ];
 
-// Pool combinato di tutti i kanji fino alla Lezione 7.
+const KANJI_L8 = [
+  { kanji:"員", onkun:"いん", meaning:"membro", examples:[
+    {word:"会社員", reading:"かいしゃいん", it:"impiegato/a"},
+    {word:"店員", reading:"てんいん", it:"commesso/a"},
+    {word:"会員", reading:"かいいん", it:"socio/membro"},
+    {word:"駅員", reading:"えきいん", it:"addetto stazione"}
+  ]},
+  { kanji:"新", onkun:"しん／あたら", meaning:"nuovo", examples:[
+    {word:"新しい", reading:"あたらしい", it:"nuovo"},
+    {word:"新聞", reading:"しんぶん", it:"giornale"},
+    {word:"新幹線", reading:"しんかんせん", it:"Shinkansen"},
+    {word:"新鮮な", reading:"しんせんな", it:"fresco"}
+  ]},
+  { kanji:"聞", onkun:"ぶん／き", meaning:"ascoltare", examples:[
+    {word:"聞く", reading:"きく", it:"ascoltare"},
+    {word:"新聞", reading:"しんぶん", it:"giornale"},
+    {word:"聞こえる", reading:"きこえる", it:"potersi sentire"}
+  ]},
+  { kanji:"作", onkun:"さく／つく", meaning:"fare", examples:[
+    {word:"作る", reading:"つくる", it:"fare/produrre"},
+    {word:"作文", reading:"さくぶん", it:"composizione"},
+    {word:"作品", reading:"さくひん", it:"opera (artistica)"},
+    {word:"作者", reading:"さくしゃ", it:"autore"}
+  ]},
+  { kanji:"仕", onkun:"し／つか", meaning:"servire", examples:[
+    {word:"仕事", reading:"しごと", it:"lavoro"},
+    {word:"仕返し", reading:"しかえし", it:"vendetta"},
+    {word:"仕える", reading:"つかえる", it:"servire"}
+  ]},
+  { kanji:"事", onkun:"じ／ごと・こと", meaning:"cosa", examples:[
+    {word:"仕事", reading:"しごと", it:"lavoro"},
+    {word:"事", reading:"こと", it:"cosa"},
+    {word:"火事", reading:"かじ", it:"incendio"},
+    {word:"食事", reading:"しょくじ", it:"pasto"},
+    {word:"返事", reading:"へんじ", it:"risposta"}
+  ]},
+  { kanji:"電", onkun:"でん", meaning:"elettricità", examples:[
+    {word:"電車", reading:"でんしゃ", it:"treno"},
+    {word:"電気", reading:"でんき", it:"elettricità"},
+    {word:"電話", reading:"でんわ", it:"telefono"},
+    {word:"電池", reading:"でんち", it:"batteria"}
+  ]},
+  { kanji:"車", onkun:"しゃ／くるま", meaning:"macchina", examples:[
+    {word:"車", reading:"くるま", it:"macchina"},
+    {word:"電車", reading:"でんしゃ", it:"treno"},
+    {word:"自転車", reading:"じてんしゃ", it:"bicicletta"},
+    {word:"車いす", reading:"くるまいす", it:"sedia a rotelle"}
+  ]},
+  { kanji:"休", onkun:"きゅう／やす", meaning:"riposare", examples:[
+    {word:"休む", reading:"やすむ", it:"riposare/assentarsi"},
+    {word:"休み", reading:"やすみ", it:"vacanza/assenza"},
+    {word:"休日", reading:"きゅうじつ", it:"giorno di riposo"}
+  ]},
+  { kanji:"言", onkun:"げん／い・こと", meaning:"dire", examples:[
+    {word:"言う", reading:"いう", it:"dire"},
+    {word:"言語学", reading:"げんごがく", it:"linguistica"},
+    {word:"方言", reading:"ほうげん", it:"dialetto"},
+    {word:"言葉", reading:"ことば", it:"parola/lingua"}
+  ]},
+  { kanji:"読", onkun:"どく／よ", meaning:"leggere", examples:[
+    {word:"読む", reading:"よむ", it:"leggere"},
+    {word:"読書", reading:"どくしょ", it:"lettura (attività)"},
+    {word:"読み物", reading:"よみもの", it:"materiale di lettura"}
+  ]},
+  { kanji:"思", onkun:"し／おも", meaning:"pensare", examples:[
+    {word:"思う", reading:"おもう", it:"pensare"},
+    {word:"不思議な", reading:"ふしぎな", it:"misterioso"},
+    {word:"思い出す", reading:"おもいだす", it:"ricordare"}
+  ]},
+  { kanji:"次", onkun:"じ／つぎ", meaning:"prossimo", examples:[
+    {word:"次", reading:"つぎ", it:"prossimo"},
+    {word:"次女", reading:"じじょ", it:"seconda figlia"},
+    {word:"目次", reading:"もくじ", it:"indice (libro)"},
+    {word:"次回", reading:"じかい", it:"prossima volta"}
+  ]},
+  { kanji:"何", onkun:"なに・なん", meaning:"cosa", examples:[
+    {word:"何", reading:"なに", it:"cosa"},
+    {word:"何時", reading:"なんじ", it:"che ora"},
+    {word:"何人", reading:"なんにん", it:"quante persone"},
+    {word:"何か", reading:"なにか", it:"qualcosa"}
+  ]}
+];
+
+const KANJI_L9 = [
+  { kanji:"午", onkun:"ご", meaning:"mezzogiorno", examples:[
+    {word:"午前", reading:"ごぜん", it:"mattina (A.M.)"},
+    {word:"午後", reading:"ごご", it:"pomeriggio (P.M.)"},
+    {word:"午前中", reading:"ごぜんちゅう", it:"in mattinata"},
+    {word:"正午", reading:"しょうご", it:"mezzogiorno"}
+  ]},
+  { kanji:"後", onkun:"ご／あと・うし", meaning:"dopo", examples:[
+    {word:"午後", reading:"ごご", it:"pomeriggio"},
+    {word:"〜の後", reading:"のあと", it:"dopo..."},
+    {word:"後で", reading:"あとで", it:"più tardi"},
+    {word:"後ろ", reading:"うしろ", it:"dietro"}
+  ]},
+  { kanji:"前", onkun:"ぜん／まえ", meaning:"prima", examples:[
+    {word:"前", reading:"まえ", it:"prima/davanti"},
+    {word:"午前", reading:"ごぜん", it:"mattina"},
+    {word:"名前", reading:"なまえ", it:"nome"},
+    {word:"前売り", reading:"まえうり", it:"vendita anticipata"}
+  ]},
+  { kanji:"名", onkun:"めい・みょう／な", meaning:"nome", examples:[
+    {word:"名前", reading:"なまえ", it:"nome"},
+    {word:"有名な", reading:"ゆうめいな", it:"famoso"},
+    {word:"名刺", reading:"めいし", it:"biglietto da visita"},
+    {word:"氏名", reading:"しめい", it:"nome completo"}
+  ]},
+  { kanji:"白", onkun:"はく／しろ", meaning:"bianco", examples:[
+    {word:"白い", reading:"しろい", it:"bianco"},
+    {word:"白紙", reading:"はくし", it:"foglio bianco"},
+    {word:"白", reading:"しろ", it:"bianco (colore)"},
+    {word:"白鳥", reading:"はくちょう", it:"cigno"}
+  ]},
+  { kanji:"雨", onkun:"う／あめ", meaning:"pioggia", examples:[
+    {word:"雨", reading:"あめ", it:"pioggia"},
+    {word:"雨期", reading:"うき", it:"stagione delle piogge"},
+    {word:"梅雨", reading:"つゆ", it:"stagione delle piogge"},
+    {word:"大雨", reading:"おおあめ", it:"pioggia forte"}
+  ]},
+  { kanji:"書", onkun:"しょ／か", meaning:"scrivere", examples:[
+    {word:"書く", reading:"かく", it:"scrivere"},
+    {word:"辞書", reading:"じしょ", it:"dizionario"},
+    {word:"教科書", reading:"きょうかしょ", it:"libro di testo"},
+    {word:"図書館", reading:"としょかん", it:"biblioteca"}
+  ]},
+  { kanji:"友", onkun:"ゆう／とも", meaning:"amico", examples:[
+    {word:"友だち", reading:"ともだち", it:"amico/a"},
+    {word:"親友", reading:"しんゆう", it:"migliore amico"},
+    {word:"友人", reading:"ゆうじん", it:"amico"},
+    {word:"友情", reading:"ゆうじょう", it:"amicizia"}
+  ]},
+  { kanji:"間", onkun:"かん・げん／あいだ", meaning:"tra", examples:[
+    {word:"時間", reading:"じかん", it:"tempo"},
+    {word:"二時間", reading:"にじかん", it:"due ore"},
+    {word:"間", reading:"あいだ", it:"tra/intervallo"},
+    {word:"人間", reading:"にんげん", it:"essere umano"},
+    {word:"一週間", reading:"いっしゅうかん", it:"una settimana"}
+  ]},
+  { kanji:"家", onkun:"か／いえ", meaning:"casa", examples:[
+    {word:"家", reading:"いえ", it:"casa"},
+    {word:"家族", reading:"かぞく", it:"famiglia"},
+    {word:"家内", reading:"かない", it:"mia moglie"},
+    {word:"作家", reading:"さっか", it:"scrittore"}
+  ]},
+  { kanji:"話", onkun:"わ／はな・はなし", meaning:"parlare", examples:[
+    {word:"話す", reading:"はなす", it:"parlare"},
+    {word:"話", reading:"はなし", it:"discorso/storia"},
+    {word:"電話", reading:"でんわ", it:"telefono"},
+    {word:"会話", reading:"かいわ", it:"conversazione"}
+  ]},
+  { kanji:"少", onkun:"しょう／すこ・すく", meaning:"poco", examples:[
+    {word:"少し", reading:"すこし", it:"un po'"},
+    {word:"少ない", reading:"すくない", it:"poco/pochi"},
+    {word:"少々", reading:"しょうしょう", it:"un pochino"},
+    {word:"少女", reading:"しょうじょ", it:"ragazza"},
+    {word:"少年", reading:"しょうねん", it:"ragazzo"}
+  ]},
+  { kanji:"古", onkun:"こ／ふる", meaning:"vecchio", examples:[
+    {word:"古い", reading:"ふるい", it:"vecchio"},
+    {word:"中古", reading:"ちゅうこ", it:"usato/di seconda mano"},
+    {word:"古代", reading:"こだい", it:"tempi antichi"}
+  ]},
+  { kanji:"知", onkun:"ち／し", meaning:"sapere", examples:[
+    {word:"知る", reading:"しる", it:"sapere/conoscere"},
+    {word:"知人", reading:"ちじん", it:"conoscente"},
+    {word:"知り合い", reading:"しりあい", it:"conoscente"}
+  ]},
+  { kanji:"来", onkun:"らい／く・き・こ", meaning:"venire", examples:[
+    {word:"来る", reading:"くる", it:"venire"},
+    {word:"来ます", reading:"きます", it:"venire (educato)"},
+    {word:"来ない", reading:"こない", it:"non venire"},
+    {word:"来週", reading:"らいしゅう", it:"settimana prossima"},
+    {word:"来日", reading:"らいにち", it:"visita in Giappone"}
+  ]}
+];
+
+const KANJI_L10 = [
+  { kanji:"住", onkun:"じゅう／す", meaning:"vivere", examples:[
+    {word:"住む", reading:"すむ", it:"vivere/abitare"},
+    {word:"住所", reading:"じゅうしょ", it:"indirizzo"},
+    {word:"移住する", reading:"いじゅうする", it:"emigrare"}
+  ]},
+  { kanji:"正", onkun:"しょう・せい／ただ", meaning:"corretto", examples:[
+    {word:"お正月", reading:"おしょうがつ", it:"Capodanno"},
+    {word:"正しい", reading:"ただしい", it:"corretto"},
+    {word:"正午", reading:"しょうご", it:"mezzogiorno"},
+    {word:"正解", reading:"せいかい", it:"risposta corretta"}
+  ]},
+  { kanji:"年", onkun:"ねん／とし", meaning:"anno", examples:[
+    {word:"三年生", reading:"さんねんせい", it:"studente del terzo anno"},
+    {word:"来年", reading:"らいねん", it:"anno prossimo"},
+    {word:"今年", reading:"ことし", it:"quest'anno"},
+    {word:"年", reading:"とし", it:"anno/età"}
+  ]},
+  { kanji:"売", onkun:"ばい／う", meaning:"vendere", examples:[
+    {word:"売る", reading:"うる", it:"vendere"},
+    {word:"売店", reading:"ばいてん", it:"chiosco"},
+    {word:"自動販売機", reading:"じどうはんばいき", it:"distributore automatico"}
+  ]},
+  { kanji:"買", onkun:"ばい／か", meaning:"comprare", examples:[
+    {word:"買う", reading:"かう", it:"comprare"},
+    {word:"買い物", reading:"かいもの", it:"spesa/shopping"},
+    {word:"売買", reading:"ばいばい", it:"compravendita"}
+  ]},
+  { kanji:"町", onkun:"ちょう／まち", meaning:"città", examples:[
+    {word:"町", reading:"まち", it:"città/paese"},
+    {word:"北山町", reading:"きたやまちょう", it:"città di Kitayama"},
+    {word:"町長", reading:"ちょうちょう", it:"sindaco"}
+  ]},
+  { kanji:"長", onkun:"ちょう／なが", meaning:"lungo", examples:[
+    {word:"長い", reading:"ながい", it:"lungo"},
+    {word:"長男", reading:"ちょうなん", it:"figlio maggiore"},
+    {word:"社長", reading:"しゃちょう", it:"presidente d'azienda"}
+  ]},
+  { kanji:"道", onkun:"どう／みち", meaning:"strada", examples:[
+    {word:"道", reading:"みち", it:"strada"},
+    {word:"書道", reading:"しょどう", it:"calligrafia"},
+    {word:"柔道", reading:"じゅうどう", it:"judo"},
+    {word:"北海道", reading:"ほっかいどう", it:"Hokkaido"}
+  ]},
+  { kanji:"雪", onkun:"せつ／ゆき", meaning:"neve", examples:[
+    {word:"雪", reading:"ゆき", it:"neve"},
+    {word:"新雪", reading:"しんせつ", it:"neve fresca"},
+    {word:"雪だるま", reading:"ゆきだるま", it:"pupazzo di neve"}
+  ]},
+  { kanji:"立", onkun:"りつ／た", meaning:"stare in piedi", examples:[
+    {word:"立つ", reading:"たつ", it:"stare in piedi/alzarsi"},
+    {word:"国立大学", reading:"こくりつだいがく", it:"università statale"},
+    {word:"私立高校", reading:"しりつこうこう", it:"liceo privato"}
+  ]},
+  { kanji:"自", onkun:"じ", meaning:"sé stesso", examples:[
+    {word:"自分", reading:"じぶん", it:"sé stesso"},
+    {word:"自動車", reading:"じどうしゃ", it:"automobile"},
+    {word:"自転車", reading:"じてんしゃ", it:"bicicletta"},
+    {word:"自由", reading:"じゆう", it:"libertà"}
+  ]},
+  { kanji:"夜", onkun:"や／よる・よ", meaning:"notte", examples:[
+    {word:"夜", reading:"よる", it:"notte"},
+    {word:"夜中", reading:"よなか", it:"piena notte"},
+    {word:"今夜", reading:"こんや", it:"stanotte"},
+    {word:"夜明け", reading:"よあけ", it:"alba"}
+  ]},
+  { kanji:"朝", onkun:"ちょう／あさ", meaning:"mattina", examples:[
+    {word:"朝", reading:"あさ", it:"mattina"},
+    {word:"今朝", reading:"けさ", it:"stamattina"},
+    {word:"朝食", reading:"ちょうしょく", it:"colazione"},
+    {word:"毎朝", reading:"まいあさ", it:"ogni mattina"}
+  ]},
+  { kanji:"持", onkun:"じ／も", meaning:"tenere", examples:[
+    {word:"持つ", reading:"もつ", it:"tenere/portare"},
+    {word:"持ってくる", reading:"もってくる", it:"portare (una cosa)"},
+    {word:"所持品", reading:"しょじひん", it:"effetti personali"},
+    {word:"気持ち", reading:"きもち", it:"sentimento"}
+  ]}
+];
+
+const KANJI_L11 = [
+  { kanji:"手", onkun:"しゅ／て", meaning:"mano", examples:[
+    {word:"手紙", reading:"てがみ", it:"lettera"},
+    {word:"歌手", reading:"かしゅ", it:"cantante"},
+    {word:"手", reading:"て", it:"mano"},
+    {word:"手話", reading:"しゅわ", it:"lingua dei segni"},
+    {word:"上手な", reading:"じょうずな", it:"bravo"}
+  ]},
+  { kanji:"紙", onkun:"し／がみ・かみ", meaning:"carta", examples:[
+    {word:"手紙", reading:"てがみ", it:"lettera"},
+    {word:"紙", reading:"かみ", it:"carta"},
+    {word:"和紙", reading:"わし", it:"carta giapponese"},
+    {word:"表紙", reading:"ひょうし", it:"copertina"},
+    {word:"折り紙", reading:"おりがみ", it:"origami"}
+  ]},
+  { kanji:"好", onkun:"こう／す・この", meaning:"gradire", examples:[
+    {word:"好きな", reading:"すきな", it:"piacere/gradire"},
+    {word:"大好きな", reading:"だいすきな", it:"amare"},
+    {word:"好意", reading:"こうい", it:"benevolenza"},
+    {word:"好み", reading:"このみ", it:"gusto/preferenza"},
+    {word:"好物", reading:"こうぶつ", it:"cibo preferito"}
+  ]},
+  { kanji:"近", onkun:"きん／ちか", meaning:"vicino", examples:[
+    {word:"近く", reading:"ちかく", it:"vicino"},
+    {word:"近所", reading:"きんじょ", it:"vicinato"},
+    {word:"最近", reading:"さいきん", it:"recentemente"},
+    {word:"中近東", reading:"ちゅうきんとう", it:"Medio Oriente"}
+  ]},
+  { kanji:"明", onkun:"めい／あか", meaning:"luminoso", examples:[
+    {word:"明るい", reading:"あかるい", it:"allegro/luminoso"},
+    {word:"明日", reading:"あした", it:"domani"},
+    {word:"説明", reading:"せつめい", it:"spiegazione"},
+    {word:"発明", reading:"はつめい", it:"invenzione"},
+    {word:"文明", reading:"ぶんめい", it:"civiltà"}
+  ]},
+  { kanji:"病", onkun:"びょう", meaning:"malato", examples:[
+    {word:"病院", reading:"びょういん", it:"ospedale"},
+    {word:"病気", reading:"びょうき", it:"malattia"},
+    {word:"重病", reading:"じゅうびょう", it:"malattia grave"},
+    {word:"急病", reading:"きゅうびょう", it:"malattia improvvisa"}
+  ]},
+  { kanji:"院", onkun:"いん", meaning:"istituto", examples:[
+    {word:"病院", reading:"びょういん", it:"ospedale"},
+    {word:"大学院", reading:"だいがくいん", it:"scuola di specializzazione"},
+    {word:"美容院", reading:"びよういん", it:"salone di bellezza"}
+  ]},
+  { kanji:"映", onkun:"えい／うつ", meaning:"riflettere", examples:[
+    {word:"映画", reading:"えいが", it:"film"},
+    {word:"映画館", reading:"えいがかん", it:"cinema"},
+    {word:"映る", reading:"うつる", it:"essere riflesso"}
+  ]},
+  { kanji:"画", onkun:"が・かく", meaning:"immagine", examples:[
+    {word:"映画", reading:"えいが", it:"film"},
+    {word:"画家", reading:"がか", it:"pittore"},
+    {word:"計画", reading:"けいかく", it:"piano/progetto"},
+    {word:"漫画", reading:"まんが", it:"fumetto"}
+  ]},
+  { kanji:"歌", onkun:"か／うた", meaning:"cantare", examples:[
+    {word:"歌う", reading:"うたう", it:"cantare"},
+    {word:"歌", reading:"うた", it:"canzone"},
+    {word:"歌手", reading:"かしゅ", it:"cantante"},
+    {word:"国歌", reading:"こっか", it:"inno nazionale"},
+    {word:"歌舞伎", reading:"かぶき", it:"kabuki"}
+  ]},
+  { kanji:"市", onkun:"し／いち", meaning:"città", examples:[
+    {word:"川口市", reading:"かわぐちし", it:"città di Kawaguchi"},
+    {word:"市役所", reading:"しやくしょ", it:"municipio"},
+    {word:"市長", reading:"しちょう", it:"sindaco"},
+    {word:"市場", reading:"いちば", it:"mercato"}
+  ]},
+  { kanji:"所", onkun:"じょ・しょ／ところ・どころ", meaning:"luogo", examples:[
+    {word:"所", reading:"ところ", it:"luogo"},
+    {word:"近所", reading:"きんじょ", it:"vicinato"},
+    {word:"台所", reading:"だいどころ", it:"cucina"},
+    {word:"住所", reading:"じゅうしょ", it:"indirizzo"}
+  ]},
+  { kanji:"勉", onkun:"べん／つと", meaning:"sforzarsi", examples:[
+    {word:"勉強する", reading:"べんきょうする", it:"studiare"},
+    {word:"勉める", reading:"つとめる", it:"impegnarsi"},
+    {word:"勤勉な", reading:"きんべんな", it:"diligente"}
+  ]},
+  { kanji:"強", onkun:"きょう・ごう／つよ", meaning:"forte", examples:[
+    {word:"勉強する", reading:"べんきょうする", it:"studiare"},
+    {word:"強い", reading:"つよい", it:"forte"},
+    {word:"強情な", reading:"ごうじょうな", it:"testardo"},
+    {word:"強力な", reading:"きょうりょくな", it:"potente"}
+  ]},
+  { kanji:"有", onkun:"ゆう／あ", meaning:"esistere", examples:[
+    {word:"有名な", reading:"ゆうめいな", it:"famoso"},
+    {word:"有料", reading:"ゆうりょう", it:"a pagamento"},
+    {word:"有る", reading:"ある", it:"esistere/esserci"},
+    {word:"有能な", reading:"ゆうのうな", it:"capace"}
+  ]},
+  { kanji:"旅", onkun:"りょ／たび", meaning:"viaggio", examples:[
+    {word:"旅行", reading:"りょこう", it:"viaggio"},
+    {word:"旅館", reading:"りょかん", it:"locanda giapponese"},
+    {word:"一人旅", reading:"ひとりたび", it:"viaggio da solo"},
+    {word:"旅券", reading:"りょけん", it:"passaporto"}
+  ]}
+];
+
+const KANJI_L12 = [
+  { kanji:"昔", onkun:"むかし", meaning:"tempi antichi", examples:[
+    {word:"昔", reading:"むかし", it:"tempi antichi"},
+    {word:"昔話", reading:"むかしばなし", it:"racconto antico"},
+    {word:"大昔", reading:"おおむかし", it:"tempi remoti"}
+  ]},
+  { kanji:"々", onkun:"", meaning:"simbolo di ripetizione", examples:[
+    {word:"昔々", reading:"むかしむかし", it:"tanto tempo fa"},
+    {word:"人々", reading:"ひとびと", it:"persone"},
+    {word:"時々", reading:"ときどき", it:"a volte"},
+    {word:"色々な", reading:"いろいろな", it:"vario"}
+  ]},
+  { kanji:"神", onkun:"じん・しん／かみ", meaning:"dio", examples:[
+    {word:"神さま", reading:"かみさま", it:"Dio"},
+    {word:"神社", reading:"じんじゃ", it:"santuario shintoista"},
+    {word:"神道", reading:"しんとう", it:"Shintoismo"},
+    {word:"神戸市", reading:"こうべし", it:"città di Kobe"}
+  ]},
+  { kanji:"早", onkun:"そう／はや", meaning:"presto", examples:[
+    {word:"早い", reading:"はやい", it:"presto/veloce"},
+    {word:"早起きする", reading:"はやおきする", it:"alzarsi presto"},
+    {word:"早朝", reading:"そうちょう", it:"mattina presto"}
+  ]},
+  { kanji:"起", onkun:"き／お", meaning:"alzarsi", examples:[
+    {word:"起きる", reading:"おきる", it:"alzarsi/svegliarsi"},
+    {word:"起こす", reading:"おこす", it:"svegliare qualcuno"},
+    {word:"再起動", reading:"さいきどう", it:"riavvio"}
+  ]},
+  { kanji:"牛", onkun:"ぎゅう／うし", meaning:"mucca", examples:[
+    {word:"牛", reading:"うし", it:"mucca"},
+    {word:"牛乳", reading:"ぎゅうにゅう", it:"latte"},
+    {word:"牛肉", reading:"ぎゅうにく", it:"carne di manzo"},
+    {word:"子牛", reading:"こうし", it:"vitello"}
+  ]},
+  { kanji:"使", onkun:"し／つか", meaning:"usare", examples:[
+    {word:"使う", reading:"つかう", it:"usare"},
+    {word:"大使", reading:"たいし", it:"ambasciatore"},
+    {word:"使用中", reading:"しようちゅう", it:"occupato (in uso)"},
+    {word:"お使い", reading:"おつかい", it:"commissione"}
+  ]},
+  { kanji:"働", onkun:"どう／はたら", meaning:"lavorare", examples:[
+    {word:"働く", reading:"はたらく", it:"lavorare"},
+    {word:"共働き", reading:"ともばたらき", it:"entrambi i coniugi lavorano"},
+    {word:"労働", reading:"ろうどう", it:"lavoro/manodopera"}
+  ]},
+  { kanji:"連", onkun:"れん／つ", meaning:"collegare", examples:[
+    {word:"連れて帰る", reading:"つれてかえる", it:"riportare (una persona)"},
+    {word:"国連", reading:"こくれん", it:"Nazioni Unite"},
+    {word:"連休", reading:"れんきゅう", it:"giorni di vacanza consecutivi"}
+  ]},
+  { kanji:"別", onkun:"べつ／わか", meaning:"separare", examples:[
+    {word:"別れる", reading:"わかれる", it:"separarsi/lasciarsi"},
+    {word:"別に", reading:"べつに", it:"non in particolare"},
+    {word:"特別な", reading:"とくべつな", it:"speciale"},
+    {word:"差別", reading:"さべつ", it:"discriminazione"}
+  ]},
+  { kanji:"度", onkun:"ど", meaning:"volta; gradi", examples:[
+    {word:"一度", reading:"いちど", it:"una volta"},
+    {word:"今度", reading:"こんど", it:"prossima volta"},
+    {word:"温度", reading:"おんど", it:"temperatura"},
+    {word:"三十度", reading:"さんじゅうど", it:"30 gradi"}
+  ]},
+  { kanji:"赤", onkun:"せき／あか", meaning:"rosso", examples:[
+    {word:"赤", reading:"あか", it:"rosso (colore)"},
+    {word:"赤い", reading:"あかい", it:"rosso"},
+    {word:"赤ちゃん", reading:"あかちゃん", it:"neonato"},
+    {word:"赤十字", reading:"せきじゅうじ", it:"Croce Rossa"}
+  ]},
+  { kanji:"青", onkun:"せい／あお", meaning:"blu", examples:[
+    {word:"青", reading:"あお", it:"blu (colore)"},
+    {word:"青い", reading:"あおい", it:"blu"},
+    {word:"青年", reading:"せいねん", it:"giovane"},
+    {word:"青空", reading:"あおぞら", it:"cielo azzurro"}
+  ]},
+  { kanji:"色", onkun:"しき・しょく／いろ", meaning:"colore", examples:[
+    {word:"色", reading:"いろ", it:"colore"},
+    {word:"色々な", reading:"いろいろな", it:"vario"},
+    {word:"景色", reading:"けしき", it:"paesaggio"},
+    {word:"特色", reading:"とくしょく", it:"caratteristica"}
+  ]}
+];
+
+// Pool combinato di tutti i kanji fino alla Lezione 12.
 // Ogni kanji riceve un campo "lesson" per permettere di filtrare per capitolo nel quiz.
 function withLessonK(arr, n) { return arr.map(k => ({ ...k, lesson: n })); }
 const KANJI_ALL = [
   ...withLessonK(KANJI_L3, 3), ...withLessonK(KANJI_L4, 4), ...withLessonK(KANJI_L5, 5),
-  ...withLessonK(KANJI_L6, 6), ...withLessonK(KANJI_L7, 7)
+  ...withLessonK(KANJI_L6, 6), ...withLessonK(KANJI_L7, 7), ...withLessonK(KANJI_L8, 8),
+  ...withLessonK(KANJI_L9, 9), ...withLessonK(KANJI_L10, 10), ...withLessonK(KANJI_L11, 11),
+  ...withLessonK(KANJI_L12, 12)
 ];

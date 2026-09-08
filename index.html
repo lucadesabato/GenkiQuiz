@@ -202,7 +202,7 @@ function saveResult(mode, score, total) {
 let state = {
   screen: "mode",
   mode: "vocab",      // "vocab" | "kanji" | "grammar" | "verbs" | "adjectives" | "scrittura"
-  maxLesson: 10,      // filtra i contenuti fino a questa lezione inclusa
+  maxLesson: 12,      // filtra i contenuti fino a questa lezione inclusa
   totalItems: 20,
   questions: [],
   idx: 0,
@@ -559,8 +559,8 @@ function render() {
   const MODES = {
     vocab: {
       title: "Vocabolario",
-      lessons: "Lezioni 1-10",
-      maxLesson: 10,
+      lessons: "Lezioni 1-12",
+      maxLesson: 12,
       max: VOCAB_ALL.length,
       menuLabel: `Vocabolario (${VOCAB_ALL.length} parole)`,
       countLabel: `${VOCAB_ALL.length} vocaboli disponibili`,
@@ -568,27 +568,27 @@ function render() {
     },
     kanji: {
       title: "Kanji",
-      lessons: "Lezioni 3-7",
-      maxLesson: 7,
+      lessons: "Lezioni 3-12",
+      maxLesson: 12,
       minLesson: 3, // i kanji iniziano dalla Lezione 3, non ha senso partire da 1
       max: KANJI_ALL.length * 2, // metà domande "lettura", metà "esempio"
-      menuLabel: `Kanji (${KANJI_ALL.length} kanji, Lez. 3-7)`,
+      menuLabel: `Kanji (${KANJI_ALL.length} kanji, Lez. 3-12)`,
       countLabel: `${KANJI_ALL.length} kanji disponibili`,
       setupQuestion: "Quante domande vuoi (lettura + esempi)?"
     },
     grammar: {
       title: "Grammatica",
-      lessons: "Lezioni 1-10",
-      maxLesson: 10,
+      lessons: "Lezioni 1-12",
+      maxLesson: 12,
       max: GRAMMAR_ALL.length,
-      menuLabel: `Grammatica (${GRAMMAR_ALL.length} domande, Lez. 1-10)`,
+      menuLabel: `Grammatica (${GRAMMAR_ALL.length} domande, Lez. 1-12)`,
       countLabel: `${GRAMMAR_ALL.length} domande disponibili`,
       setupQuestion: "Quante domande di grammatica vuoi?"
     },
     verbs: {
       title: "Verbi",
-      lessons: "Lezioni 3-10",
-      maxLesson: 10,
+      lessons: "Lezioni 3-12",
+      maxLesson: 12,
       max: VERBS_ALL.length,
       menuLabel: `Verbi (${VERBS_ALL.length} verbi)`,
       countLabel: `${VERBS_ALL.length} verbi disponibili`,
@@ -596,8 +596,8 @@ function render() {
     },
     adjectives: {
       title: "Aggettivi",
-      lessons: "Lezioni 3-10",
-      maxLesson: 10,
+      lessons: "Lezioni 3-12",
+      maxLesson: 12,
       max: ADJECTIVES_ALL.length,
       menuLabel: `Aggettivi (${ADJECTIVES_ALL.length} aggettivi)`,
       countLabel: `${ADJECTIVES_ALL.length} aggettivi disponibili`,
@@ -605,8 +605,8 @@ function render() {
     },
     scrittura: {
       title: "Scrittura",
-      lessons: "Lezioni 1-10",
-      maxLesson: 10,
+      lessons: "Lezioni 1-12",
+      maxLesson: 12,
       max: buildScritturaPool().length,
       menuLabel: `Scrittura (${buildScritturaPool().length} parole, scrivi tu la risposta)`,
       countLabel: `${buildScritturaPool().length} parole disponibili`,
@@ -617,7 +617,7 @@ function render() {
   if (state.screen === "mode") {
     app.innerHTML = `
       <h1>Genki I &mdash; Quiz</h1>
-      <p class="subtitle">Lezioni 1-10 &middot; scegli cosa allenare</p>
+      <p class="subtitle">Lezioni 1-12 &middot; scegli cosa allenare</p>
       <div class="card">
         <button id="vocabBtn">${MODES.vocab.menuLabel}</button>
         <div style="height:10px"></div>
@@ -647,18 +647,23 @@ function render() {
     const startLesson = cfg.minLesson || 1;
     const buttons = [];
     for (let i = startLesson; i <= cfg.maxLesson; i++) {
-      const label = i === startLesson ? `Capitolo ${startLesson}` : `Capitoli ${startLesson}-${i}`;
-      buttons.push(`<button class="secondary chapterBtn" data-lesson="${i}" style="margin-bottom:10px;">${label}</button>`);
+      const label = i === startLesson ? `${startLesson}` : `${startLesson}-${i}`;
+      buttons.push(`<button class="secondary chapterBtn" data-lesson="${i}">${label}</button>`);
     }
     app.innerHTML = `
       <h1>Genki I &mdash; ${cfg.title}</h1>
-      <p class="subtitle">Quanti capitoli vuoi includere?</p>
-      <div class="card" style="display:flex; flex-direction:column;">
-        ${buttons.join("")}
+      <p class="subtitle">Che capitoli vuoi trattare?</p>
+      <div class="card">
+        <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px;">
+          ${buttons.join("")}
+        </div>
       </div>
       <button id="backToModeBtn" class="secondary">&larr; Torna al menu</button>
     `;
     document.querySelectorAll(".chapterBtn").forEach(btn => {
+      btn.style.padding = "14px 4px";
+      btn.style.margin = "0";
+      btn.style.fontSize = "15px";
       btn.onclick = () => {
         state.maxLesson = parseInt(btn.dataset.lesson, 10);
         state.screen = "setup";
