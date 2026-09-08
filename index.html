@@ -201,7 +201,8 @@ function saveResult(mode, score, total) {
 
 let state = {
   screen: "mode",
-  mode: "vocab",      // "vocab" | "kanji"
+  mode: "vocab",      // "vocab" | "kanji" | "grammar" | "verbs" | "adjectives" | "scrittura"
+  maxLesson: 10,      // filtra i contenuti fino a questa lezione inclusa
   totalItems: 20,
   questions: [],
   idx: 0,
@@ -211,7 +212,8 @@ let state = {
 
 // Costruisce N domande di vocabolario (kana/kanji <-> italiano)
 function buildVocabQuestions(n) {
-  const pool = VOCAB_ALL;
+  const fullPool = VOCAB_ALL;
+  const pool = fullPool.filter(w => w.lesson <= state.maxLesson);
   const words = shuffle(pool).slice(0, Math.min(n, pool.length));
   return words.map(w => {
     const dir = Math.random() < 0.5 ? "jp2it" : "it2jp";
@@ -221,7 +223,9 @@ function buildVocabQuestions(n) {
     // Se la parola appartiene a una categoria "stretta" (numeri, giorni, mesi, famiglia,
     // paesi, colori), preferisci distrattori dalla STESSA categoria: molto più difficili
     // da eliminare a colpo d'occhio rispetto a parole scelte a caso da tutto il pool.
-    let candidatePool = pool.filter(p => valueOf(p) !== correctValue);
+    // I distrattori pescano dal pool COMPLETO (non filtrato per lezione), solo la parola
+    // da indovinare è limitata alle lezioni selezionate.
+    let candidatePool = fullPool.filter(p => valueOf(p) !== correctValue);
     if (w.cat) {
       const sameCat = candidatePool.filter(p => p.cat === w.cat);
       if (sameCat.length >= 3) candidatePool = sameCat;
@@ -292,7 +296,7 @@ function buildKanjiExampleQuestions(pool, count) {
 
 // Costruisce N domande sui kanji, mescolando i due tipi
 function buildKanjiQuestions(n) {
-  const pool = KANJI_ALL;
+  const pool = KANJI_ALL.filter(k => k.lesson <= state.maxLesson);
   const half = Math.round(n / 2);
   const readingQs = buildKanjiReadingQuestions(pool, half);
   const exampleQs = buildKanjiExampleQuestions(pool, n - half);
@@ -462,7 +466,8 @@ function buildAdjGroup(w) {
 // Ogni gruppo produce sempre 3 domande consecutive; il conteggio "Domanda X/N" mostrato
 // all'utente si riferisce al numero di GRUPPI, non al numero di domande individuali.
 function buildVerbConjugationQuestions(n) {
-  const chosen = shuffle(VERBS_ALL).slice(0, Math.min(n, VERBS_ALL.length));
+  const pool = VERBS_ALL.filter(w => w.lesson <= state.maxLesson);
+  const chosen = shuffle(pool).slice(0, Math.min(n, pool.length));
   const groups = chosen.map(w => buildVerbGroup(w));
   const flat = [];
   groups.forEach((steps, gi) => {
@@ -475,7 +480,8 @@ function buildVerbConjugationQuestions(n) {
 
 // Stessa logica, per gli AGGETTIVI.
 function buildAdjConjugationQuestions(n) {
-  const chosen = shuffle(ADJECTIVES_ALL).slice(0, Math.min(n, ADJECTIVES_ALL.length));
+  const pool = ADJECTIVES_ALL.filter(w => w.lesson <= state.maxLesson);
+  const chosen = shuffle(pool).slice(0, Math.min(n, pool.length));
   const groups = chosen.map(w => buildAdjGroup(w));
   const flat = [];
   groups.forEach((steps, gi) => {
@@ -491,13 +497,14 @@ function buildAdjConjugationQuestions(n) {
 // ===================== SCRITTURA (input libero, match esatto) =====================
 // Pool combinato: Vocabolario + Verbi + Aggettivi, escludendo le voci che sono
 // suffissi/particelle legate (es. "〜ねんせい") che non ha senso scrivere da sole.
-function buildScritturaPool() {
+function buildScritturaPool(maxLesson) {
   const combined = [...VOCAB_ALL, ...VERBS_ALL, ...ADJECTIVES_ALL];
-  return combined.filter(w => w.jp && !w.jp.includes("〜") && !w.it.includes("..."));
+  const lessonLimit = maxLesson || 10;
+  return combined.filter(w => w.jp && !w.jp.includes("〜") && !w.it.includes("...") && w.lesson <= lessonLimit);
 }
 
 function buildScritturaQuestions(n) {
-  const pool = buildScritturaPool();
+  const pool = buildScritturaPool(state.maxLesson);
   const chosen = shuffle(pool).slice(0, Math.min(n, pool.length));
   return chosen.map(w => {
     const accepted = [w.jp, w.kanji].filter(Boolean);
@@ -522,9 +529,9 @@ function buildQuestions(mode, n) {
   return buildVocabQuestions(n);
 }
 
-// Costruisce N domande di grammatica pescando dal pool già pronto (GRAMMAR_ALL)
+// Costruisce N domande di grammatica pescando dal pool già pronto (GRAMMAR_ALL), filtrate per lezione
 function buildGrammarQuestions(n) {
-  const pool = GRAMMAR_ALL;
+  const pool = GRAMMAR_ALL.filter(q => q.lesson <= state.maxLesson);
   const chosen = shuffle(pool).slice(0, Math.min(n, pool.length));
   return chosen.map(q => ({
     promptLabel: q.point,
@@ -553,6 +560,7 @@ function render() {
     vocab: {
       title: "Vocabolario",
       lessons: "Lezioni 1-10",
+      maxLesson: 10,
       max: VOCAB_ALL.length,
       menuLabel: `Vocabolario (${VOCAB_ALL.length} parole)`,
       countLabel: `${VOCAB_ALL.length} vocaboli disponibili`,
@@ -561,6 +569,8 @@ function render() {
     kanji: {
       title: "Kanji",
       lessons: "Lezioni 3-7",
+      maxLesson: 7,
+      minLesson: 3, // i kanji iniziano dalla Lezione 3, non ha senso partire da 1
       max: KANJI_ALL.length * 2, // metà domande "lettura", metà "esempio"
       menuLabel: `Kanji (${KANJI_ALL.length} kanji, Lez. 3-7)`,
       countLabel: `${KANJI_ALL.length} kanji disponibili`,
@@ -569,6 +579,7 @@ function render() {
     grammar: {
       title: "Grammatica",
       lessons: "Lezioni 1-10",
+      maxLesson: 10,
       max: GRAMMAR_ALL.length,
       menuLabel: `Grammatica (${GRAMMAR_ALL.length} domande, Lez. 1-10)`,
       countLabel: `${GRAMMAR_ALL.length} domande disponibili`,
@@ -577,6 +588,7 @@ function render() {
     verbs: {
       title: "Verbi",
       lessons: "Lezioni 3-10",
+      maxLesson: 10,
       max: VERBS_ALL.length,
       menuLabel: `Verbi (${VERBS_ALL.length} verbi)`,
       countLabel: `${VERBS_ALL.length} verbi disponibili`,
@@ -585,6 +597,7 @@ function render() {
     adjectives: {
       title: "Aggettivi",
       lessons: "Lezioni 3-10",
+      maxLesson: 10,
       max: ADJECTIVES_ALL.length,
       menuLabel: `Aggettivi (${ADJECTIVES_ALL.length} aggettivi)`,
       countLabel: `${ADJECTIVES_ALL.length} aggettivi disponibili`,
@@ -593,6 +606,7 @@ function render() {
     scrittura: {
       title: "Scrittura",
       lessons: "Lezioni 1-10",
+      maxLesson: 10,
       max: buildScritturaPool().length,
       menuLabel: `Scrittura (${buildScritturaPool().length} parole, scrivi tu la risposta)`,
       countLabel: `${buildScritturaPool().length} parole disponibili`,
@@ -621,23 +635,80 @@ function render() {
     ["vocab", "kanji", "grammar", "verbs", "adjectives", "scrittura"].forEach(m => {
       document.getElementById(m + "Btn").onclick = () => {
         state.mode = m;
-        state.screen = "setup";
+        state.screen = "chapters";
         render();
       };
     });
     return;
   }
 
-  if (state.screen === "setup") {
+  if (state.screen === "chapters") {
     const cfg = MODES[state.mode];
-    const max = cfg.max;
-    const history = loadHistory().filter(h => (h.mode || "Vocabolario") === modeTitle(state.mode));
+    const startLesson = cfg.minLesson || 1;
+    const buttons = [];
+    for (let i = startLesson; i <= cfg.maxLesson; i++) {
+      const label = i === startLesson ? `Capitolo ${startLesson}` : `Capitoli ${startLesson}-${i}`;
+      buttons.push(`<button class="secondary chapterBtn" data-lesson="${i}" style="margin-bottom:10px;">${label}</button>`);
+    }
     app.innerHTML = `
       <h1>Genki I &mdash; ${cfg.title}</h1>
-      <p class="subtitle">${cfg.lessons} &middot; ${cfg.countLabel}</p>
+      <p class="subtitle">Quanti capitoli vuoi includere?</p>
+      <div class="card" style="display:flex; flex-direction:column;">
+        ${buttons.join("")}
+      </div>
+      <button id="backToModeBtn" class="secondary">&larr; Torna al menu</button>
+    `;
+    document.querySelectorAll(".chapterBtn").forEach(btn => {
+      btn.onclick = () => {
+        state.maxLesson = parseInt(btn.dataset.lesson, 10);
+        state.screen = "setup";
+        render();
+      };
+    });
+    document.getElementById("backToModeBtn").onclick = () => {
+      state.screen = "mode";
+      render();
+    };
+    return;
+  }
+
+  if (state.screen === "setup") {
+    const cfg = MODES[state.mode];
+    // Ricalcola quante domande sono DAVVERO disponibili con i capitoli selezionati
+    const filteredMax = (() => {
+      if (state.mode === "vocab") return VOCAB_ALL.filter(w => w.lesson <= state.maxLesson).length;
+      if (state.mode === "kanji") return KANJI_ALL.filter(k => k.lesson <= state.maxLesson).length * 2;
+      if (state.mode === "grammar") return GRAMMAR_ALL.filter(q => q.lesson <= state.maxLesson).length;
+      if (state.mode === "verbs") return VERBS_ALL.filter(w => w.lesson <= state.maxLesson).length;
+      if (state.mode === "adjectives") return ADJECTIVES_ALL.filter(w => w.lesson <= state.maxLesson).length;
+      if (state.mode === "scrittura") return buildScritturaPool(state.maxLesson).length;
+      return cfg.max;
+    })();
+    const chapterLabel = state.maxLesson === 1 ? "Capitolo 1" : `Capitoli 1-${state.maxLesson}`;
+    const history = loadHistory().filter(h => (h.mode || "Vocabolario") === modeTitle(state.mode));
+
+    if (filteredMax === 0) {
+      app.innerHTML = `
+        <h1>Genki I &mdash; ${cfg.title}</h1>
+        <p class="subtitle">${chapterLabel}</p>
+        <div class="card">
+          <p style="margin:0;">Non ci sono contenuti disponibili in questo intervallo di capitoli per questa modalità. Prova a scegliere un intervallo più ampio.</p>
+        </div>
+        <button id="backBtn" class="secondary">&larr; Cambia capitoli</button>
+      `;
+      document.getElementById("backBtn").onclick = () => {
+        state.screen = "chapters";
+        render();
+      };
+      return;
+    }
+
+    app.innerHTML = `
+      <h1>Genki I &mdash; ${cfg.title}</h1>
+      <p class="subtitle">${chapterLabel} &middot; ${filteredMax} disponibili</p>
       <div class="card">
         <label for="numItems">${cfg.setupQuestion}</label>
-        <input type="number" id="numItems" min="4" max="${max}" value="${Math.min(state.totalItems, max)}">
+        <input type="number" id="numItems" min="1" max="${filteredMax}" value="${Math.min(state.totalItems, filteredMax)}">
         <button id="startBtn">Inizia il quiz</button>
       </div>
       ${history.length ? `
@@ -647,13 +718,13 @@ function render() {
           ${history.map(h => `<div class="history-row"><span>${h.date}</span><span>${h.score} / ${h.total}</span></div>`).join("")}
         </div>
       </div>` : ""}
-      <button id="backBtn" class="secondary">&larr; Torna al menu</button>
+      <button id="backBtn" class="secondary">&larr; Cambia capitoli</button>
     `;
     document.getElementById("startBtn").onclick = () => {
       const input = document.getElementById("numItems");
       let n = parseInt(input.value, 10);
       if (!n || n < 1) n = 5;
-      if (n > max) n = max;
+      if (n > filteredMax) n = filteredMax;
       state.totalItems = n;
       state.questions = buildQuestions(state.mode, n);
       state.idx = 0;
@@ -663,7 +734,7 @@ function render() {
       render();
     };
     document.getElementById("backBtn").onclick = () => {
-      state.screen = "mode";
+      state.screen = "chapters";
       render();
     };
     return;

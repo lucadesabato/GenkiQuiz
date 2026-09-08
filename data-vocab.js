@@ -619,9 +619,12 @@ const VOCAB = {
   ]
 };
 
-// Pool combinato di tutto il vocabolario dalla Lezione 1 alla Lezione 10
+// Pool combinato di tutto il vocabolario dalla Lezione 1 alla Lezione 10.
+// Ogni parola riceve un campo "lesson" per permettere di filtrare per capitolo nel quiz.
+function withLesson(arr, n) { return arr.map(w => ({ ...w, lesson: n })); }
 const VOCAB_ALL = [
-  ...VOCAB.lezione1, ...VOCAB.lezione2, ...VOCAB.lezione3, ...VOCAB.lezione4,
-  ...VOCAB.lezione5, ...VOCAB.lezione6, ...VOCAB.lezione7, ...VOCAB.lezione8,
-  ...VOCAB.lezione9, ...VOCAB.lezione10, ...VOCAB.utili4
+  ...withLesson(VOCAB.lezione1, 1), ...withLesson(VOCAB.lezione2, 2), ...withLesson(VOCAB.lezione3, 3),
+  ...withLesson(VOCAB.lezione4, 4), ...withLesson(VOCAB.lezione5, 5), ...withLesson(VOCAB.lezione6, 6),
+  ...withLesson(VOCAB.lezione7, 7), ...withLesson(VOCAB.lezione8, 8), ...withLesson(VOCAB.lezione9, 9),
+  ...withLesson(VOCAB.lezione10, 10), ...withLesson(VOCAB.utili4, 4)
 ];

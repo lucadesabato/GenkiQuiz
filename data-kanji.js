@@ -415,5 +415,10 @@ const KANJI_L7 = [
   ]}
 ];
 
-// Pool combinato di tutti i kanji fino alla Lezione 7
-const KANJI_ALL = [...KANJI_L3, ...KANJI_L4, ...KANJI_L5, ...KANJI_L6, ...KANJI_L7];
+// Pool combinato di tutti i kanji fino alla Lezione 7.
+// Ogni kanji riceve un campo "lesson" per permettere di filtrare per capitolo nel quiz.
+function withLessonK(arr, n) { return arr.map(k => ({ ...k, lesson: n })); }
+const KANJI_ALL = [
+  ...withLessonK(KANJI_L3, 3), ...withLessonK(KANJI_L4, 4), ...withLessonK(KANJI_L5, 5),
+  ...withLessonK(KANJI_L6, 6), ...withLessonK(KANJI_L7, 7)
+];
