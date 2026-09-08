@@ -263,13 +263,16 @@ function buildKanjiExampleQuestions(pool, count) {
   const allExamples = pool.flatMap(k => k.examples);
   const chosen = shuffle(allExamples).slice(0, count);
   return chosen.map(ex => {
-    const correctValue = ex.it;
-    const otherPool = allExamples.filter(e => e.it !== correctValue);
-    const distractors = shuffle(otherPool).slice(0, 3).map(e => e.it);
+    // La domanda mostra SOLO il kanji/la parola, mai la lettura: lettura + significato
+    // vanno indovinati insieme, combinati in ogni opzione di risposta.
+    const labelOf = (e) => `${e.reading} — ${e.it}`;
+    const correctValue = labelOf(ex);
+    const otherPool = allExamples.filter(e => labelOf(e) !== correctValue);
+    const distractors = shuffle(otherPool).slice(0, 3).map(labelOf);
     const options = shuffle([correctValue, ...distractors]);
     return {
-      promptLabel: "Cosa significa questa parola?",
-      mainText: `${ex.word} (${ex.reading})`,
+      promptLabel: "Come si legge questa parola, e cosa significa?",
+      mainText: ex.word,
       hintText: null,
       correctValue,
       options
