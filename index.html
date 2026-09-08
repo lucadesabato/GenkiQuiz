@@ -259,8 +259,18 @@ function buildKanjiReadingQuestions(pool, count) {
 
 // Domande tipo 2: mostra una parola di esempio con quel kanji, risposta = traduzione italiana
 function buildKanjiExampleQuestions(pool, count) {
-  // Costruisce un pool piatto di tutti gli esempi di tutti i kanji
-  const allExamples = pool.flatMap(k => k.examples);
+  // Costruisce un pool piatto di tutti gli esempi, ESCLUDENDO quelli "auto-referenziali"
+  // (dove la parola d'esempio è il kanji da solo, es. 山 -> 山): quell'informazione
+  // è già coperta dalla domanda "lettura", mostrarla di nuovo qui sembra una ripetizione.
+  // Alcune parole (es. 男の子) sono elencate come esempio sotto più kanji contemporaneamente
+  // (usa sia 男 sia 子): deduplica per parola così non può uscire due volte nella stessa sessione.
+  const rawExamples = pool.flatMap(k => k.examples.filter(ex => ex.word !== k.kanji));
+  const seenWords = new Set();
+  const allExamples = rawExamples.filter(ex => {
+    if (seenWords.has(ex.word)) return false;
+    seenWords.add(ex.word);
+    return true;
+  });
   const chosen = shuffle(allExamples).slice(0, count);
   return chosen.map(ex => {
     // La domanda mostra SOLO il kanji/la parola, mai la lettura: lettura + significato
