@@ -508,11 +508,14 @@ function buildScritturaQuestions(n) {
   const chosen = shuffle(pool).slice(0, Math.min(n, pool.length));
   return chosen.map(w => {
     const accepted = [w.jp, w.kanji].filter(Boolean);
+    // Formato per il feedback: "kanji / かな" se esiste il kanji, altrimenti solo la kana.
+    const displayAnswer = w.kanji ? `${w.kanji} / ${w.jp}` : w.jp;
     return {
       promptLabel: "Come si scrive in giapponese?",
       mainText: w.it,
       hintText: null,
-      correctValue: w.jp, // valore "principale" mostrato in caso di errore
+      correctValue: w.jp, // valore "principale" usato per il match
+      displayAnswer, // mostrato sempre nel feedback, corretto o sbagliato che sia
       acceptedAnswers: accepted, // hiragana O kanji, va bene uno dei due
       inputType: "text"
     };
@@ -783,11 +786,10 @@ function render() {
         const feedback = document.getElementById("feedback");
         if (isCorrect) {
           state.score++;
-          feedback.textContent = "Corretto!";
+          feedback.textContent = `Corretto! Risposta corretta: ${q.displayAnswer}`;
           feedback.className = "feedback correct";
         } else {
-          const alt = q.acceptedAnswers.join(" / ");
-          feedback.textContent = `Sbagliato — risposta giusta: ${alt}`;
+          feedback.textContent = `Sbagliato — risposta corretta: ${q.displayAnswer}`;
           feedback.className = "feedback wrong";
         }
         document.getElementById("nextBtn").classList.remove("hidden");
