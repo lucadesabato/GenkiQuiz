@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Genki - Quiz Vocabolario</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Genki Quiz">
+<meta name="theme-color" content="#d85a30">
 <style>
   * { box-sizing: border-box; }
   body {
@@ -973,6 +979,14 @@ function render() {
 }
 
 render();
+</script>
+<script>
+  // Registra il service worker per abilitare l'uso offline (solo se supportato dal browser)
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("service-worker.js").catch(() => {});
+    });
+  }
 </script>
 </body>
 </html>
