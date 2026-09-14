@@ -202,6 +202,7 @@ function saveResult(mode, score, total) {
 let state = {
   screen: "mode",
   mode: "vocab",      // "vocab" | "kanji" | "grammar" | "verbs" | "adjectives" | "scrittura"
+  subMode: "full",    // per verbs/adjectives: "full" (tipo+forma+significato) | "translationOnly" (solo significato)
   maxLesson: 12,      // filtra i contenuti fino a questa lezione inclusa
   totalItems: 20,
   questions: [],
@@ -465,9 +466,31 @@ function buildAdjGroup(w) {
 // Costruisce N gruppi di VERBI (N = quanti verbi, scelto dall'utente), mai ripetuti nella stessa sessione.
 // Ogni gruppo produce sempre 3 domande consecutive; il conteggio "Domanda X/N" mostrato
 // all'utente si riferisce al numero di GRUPPI, non al numero di domande individuali.
+// Costruisce UNA domanda di sola traduzione per una parola (usata in modalità "Solo traduzione")
+function buildTranslationOnlyQuestion(w, pool) {
+  const correct = w.it;
+  const otherPool = pool.filter(p => p.it !== correct);
+  const distractors = shuffle(otherPool).slice(0, 3).map(p => p.it);
+  return {
+    promptLabel: "Cosa significa?",
+    mainText: jpLabel(w),
+    hintText: null,
+    correctValue: correct,
+    options: shuffle([correct, ...distractors])
+  };
+}
+
 function buildVerbConjugationQuestions(n) {
   const pool = VERBS_ALL.filter(w => w.lesson <= state.maxLesson);
   const chosen = shuffle(pool).slice(0, Math.min(n, pool.length));
+
+  if (state.subMode === "translationOnly") {
+    return chosen.map((w, i) => ({
+      ...buildTranslationOnlyQuestion(w, pool),
+      groupIndex: i + 1, groupTotal: chosen.length, stepInGroup: 1, stepsInGroup: 1
+    }));
+  }
+
   const groups = chosen.map(w => buildVerbGroup(w));
   const flat = [];
   groups.forEach((steps, gi) => {
@@ -482,6 +505,14 @@ function buildVerbConjugationQuestions(n) {
 function buildAdjConjugationQuestions(n) {
   const pool = ADJECTIVES_ALL.filter(w => w.lesson <= state.maxLesson);
   const chosen = shuffle(pool).slice(0, Math.min(n, pool.length));
+
+  if (state.subMode === "translationOnly") {
+    return chosen.map((w, i) => ({
+      ...buildTranslationOnlyQuestion(w, pool),
+      groupIndex: i + 1, groupTotal: chosen.length, stepInGroup: 1, stepsInGroup: 1
+    }));
+  }
+
   const groups = chosen.map(w => buildAdjGroup(w));
   const flat = [];
   groups.forEach((steps, gi) => {
@@ -595,7 +626,9 @@ function render() {
       max: VERBS_ALL.length,
       menuLabel: `Verbi (${VERBS_ALL.length} verbi)`,
       countLabel: `${VERBS_ALL.length} verbi disponibili`,
-      setupQuestion: "Quanti verbi vuoi ripassare? (ognuno = 3 domande: tipo, forma, significato)"
+      setupQuestion: state.subMode === "translationOnly"
+        ? "Quanti verbi vuoi ripassare? (ognuno = 1 domanda: solo significato)"
+        : "Quanti verbi vuoi ripassare? (ognuno = 3 domande: tipo, forma, significato)"
     },
     adjectives: {
       title: "Aggettivi",
@@ -604,7 +637,9 @@ function render() {
       max: ADJECTIVES_ALL.length,
       menuLabel: `Aggettivi (${ADJECTIVES_ALL.length} aggettivi)`,
       countLabel: `${ADJECTIVES_ALL.length} aggettivi disponibili`,
-      setupQuestion: "Quanti aggettivi vuoi ripassare? (ognuno = 3 domande: tipo, forma, significato)"
+      setupQuestion: state.subMode === "translationOnly"
+        ? "Quanti aggettivi vuoi ripassare? (ognuno = 1 domanda: solo significato)"
+        : "Quanti aggettivi vuoi ripassare? (ognuno = 3 domande: tipo, forma, significato)"
     },
     scrittura: {
       title: "Scrittura",
@@ -638,10 +673,43 @@ function render() {
     ["vocab", "kanji", "grammar", "verbs", "adjectives", "scrittura"].forEach(m => {
       document.getElementById(m + "Btn").onclick = () => {
         state.mode = m;
-        state.screen = "chapters";
+        if (m === "verbs" || m === "adjectives") {
+          state.screen = "subMode";
+        } else {
+          state.screen = "chapters";
+        }
         render();
       };
     });
+    return;
+  }
+
+  if (state.screen === "subMode") {
+    const cfg = MODES[state.mode];
+    app.innerHTML = `
+      <h1>Genki I &mdash; ${cfg.title}</h1>
+      <p class="subtitle">Come vuoi allenarti?</p>
+      <div class="card">
+        <button id="fullModeBtn">Traduzione e coniugazione</button>
+        <div style="height:10px"></div>
+        <button id="translationModeBtn" class="secondary">Solo traduzione</button>
+      </div>
+      <button id="backToModeBtn0" class="secondary">&larr; Torna al menu</button>
+    `;
+    document.getElementById("fullModeBtn").onclick = () => {
+      state.subMode = "full";
+      state.screen = "chapters";
+      render();
+    };
+    document.getElementById("translationModeBtn").onclick = () => {
+      state.subMode = "translationOnly";
+      state.screen = "chapters";
+      render();
+    };
+    document.getElementById("backToModeBtn0").onclick = () => {
+      state.screen = "mode";
+      render();
+    };
     return;
   }
 
@@ -674,7 +742,7 @@ function render() {
       };
     });
     document.getElementById("backToModeBtn").onclick = () => {
-      state.screen = "mode";
+      state.screen = (state.mode === "verbs" || state.mode === "adjectives") ? "subMode" : "mode";
       render();
     };
     return;
