@@ -2,7 +2,7 @@
 // Strategia: "cache-first" — al primo caricamento (con internet) salva tutti i file
 // necessari; da quel momento in poi li serve dalla cache, funzionando anche offline.
 
-const CACHE_NAME = "genki-quiz-v1";
+const CACHE_NAME = "genki-quiz-v2";
 const FILES_TO_CACHE = [
   "./index.html",
   "./data-vocab.js",
@@ -11,14 +11,26 @@ const FILES_TO_CACHE = [
   "./data-verbs.js",
   "./data-adjectives.js",
   "./manifest.json",
+  "./icon-180.png",
   "./icon-192.png",
   "./icon-512.png"
 ];
 
-// Installazione: scarica e salva tutti i file in cache
+// Installazione: scarica e salva ogni file singolarmente (se uno fallisce, gli altri
+// vengono comunque salvati — a differenza di cache.addAll() che è tutto-o-niente).
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(FILES_TO_CACHE))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.all(
+        FILES_TO_CACHE.map((url) =>
+          fetch(url, { cache: "reload" })
+            .then((response) => {
+              if (response.ok) return cache.put(url, response);
+            })
+            .catch(() => {})
+        )
+      );
+    })
   );
   self.skipWaiting();
 });
