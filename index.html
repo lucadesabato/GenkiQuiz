@@ -86,6 +86,10 @@
     font-size: 15px;
   }
   button.option:last-child { margin-bottom: 0; }
+  button.option.selected {
+    background: #fdf1ea;
+    border-color: #d85a30;
+  }
   button.correct {
     background: #eaf3de;
     border-color: #639922;
@@ -237,7 +241,9 @@ let state = {
   idx: 0,
   score: 0,
   answered: false,
-  finalTotal: 0       // domande realmente affrontate quando il quiz finisce (naturalmente o con "Esci")
+  finalTotal: 0,      // domande realmente affrontate quando il quiz finisce (naturalmente o con "Esci")
+  pageAnswers: [],    // risposte scelte nella pagina corrente (modalità esame), prima di correggere
+  pageChecked: false  // se la pagina corrente è già stata corretta
 };
 
 // Costruisce N domande di vocabolario (kana/kanji <-> italiano)
@@ -788,6 +794,8 @@ function render() {
         state.idx = 0;
         state.score = 0;
         state.answered = false;
+        state.pageAnswers = [];
+        state.pageChecked = false;
         state.screen = "quiz";
         render();
       };
@@ -868,63 +876,98 @@ function render() {
       return;
     }
 
+    // ===== Modalità "esame": una PAGINA di più domande a scelta multipla insieme =====
+    const PAGE_SIZE = 10;
+    const pageStart = state.idx;
+    const pageQuestions = state.questions.slice(pageStart, pageStart + PAGE_SIZE);
+    const isLastPage = pageStart + pageQuestions.length >= state.questions.length;
+
     app.innerHTML = `
       <div class="progress">
-        <span>${progressLabel}</span>
+        <span>Domande ${pageStart + 1}-${pageStart + pageQuestions.length} / ${state.questions.length}</span>
         <span>Punteggio: ${state.score}</span>
       </div>
-      <div class="question-box">
-        <p class="question-hint">${q.promptLabel}</p>
-        <p class="question-text">${q.mainText}</p>
-        ${q.hintText ? `<p class="question-sub">${q.hintText}</p>` : ""}
-      </div>
-      <div id="options"></div>
-      <div class="feedback" id="feedback"></div>
-      <button id="nextBtn" class="hidden">Prossima domanda</button>
+      <div id="pageQuestions"></div>
+      <div id="pageWarning" style="color:var(--text-danger,#a32d2d); font-size:14px; margin-bottom:8px; display:none;">Rispondi a tutte le domande prima di correggere.</div>
+      <button id="checkPageBtn">Correggi pagina</button>
+      <button id="nextPageBtn" class="hidden">${isLastPage ? "Vedi risultati" : "Pagina successiva &rarr;"}</button>
       <button id="exitBtn" class="secondary">Esci</button>
     `;
 
-    document.getElementById("exitBtn").onclick = () => {
-      finishQuiz(state.answered ? state.idx + 1 : state.idx);
-    };
-
-    const optsDiv = document.getElementById("options");
-    q.options.forEach(opt => {
-      const btn = document.createElement("button");
-      btn.className = "option";
-      btn.textContent = opt;
-      btn.onclick = () => {
-        if (state.answered) return;
-        state.answered = true;
-        const isCorrect = opt === q.correctValue;
-        const feedback = document.getElementById("feedback");
-        const explanationHtml = q.explanation ? `<div style="margin-top:6px; font-weight:400; color:var(--text-secondary,#7a7a76);">${q.explanation}</div>` : "";
-        if (isCorrect) {
-          btn.classList.add("correct");
-          state.score++;
-          feedback.innerHTML = "Corretto!" + explanationHtml;
-          feedback.className = "feedback correct";
-        } else {
-          btn.classList.add("wrong");
-          feedback.innerHTML = `Sbagliato — risposta giusta: ${q.correctValue}` + explanationHtml;
-          feedback.className = "feedback wrong";
-          [...optsDiv.children].forEach(c => {
-            if (c.textContent === q.correctValue) c.classList.add("correct");
-          });
-        }
-        document.getElementById("nextBtn").classList.remove("hidden");
-      };
-      optsDiv.appendChild(btn);
+    const pageDiv = document.getElementById("pageQuestions");
+    pageQuestions.forEach((q, i) => {
+      const card = document.createElement("div");
+      card.className = "question-box";
+      card.style.marginBottom = "12px";
+      const groupLabel = q.groupIndex
+        ? `<p class="question-hint" style="margin-bottom:2px;">Parola ${q.groupIndex}/${q.groupTotal} &middot; passo ${q.stepInGroup}/${q.stepsInGroup}</p>`
+        : "";
+      card.innerHTML = `
+        ${groupLabel}
+        <p class="question-hint">${q.promptLabel}</p>
+        <p class="question-text">${q.mainText}</p>
+        ${q.hintText ? `<p class="question-sub">${q.hintText}</p>` : ""}
+        <div class="options" data-qi="${i}"></div>
+        <div class="feedback" data-fb="${i}" style="display:none;"></div>
+      `;
+      pageDiv.appendChild(card);
+      const optsDiv = card.querySelector(`.options[data-qi="${i}"]`);
+      q.options.forEach(opt => {
+        const btn = document.createElement("button");
+        btn.className = "option";
+        btn.textContent = opt;
+        btn.onclick = () => {
+          if (state.pageChecked) return;
+          state.pageAnswers[i] = opt;
+          [...optsDiv.children].forEach(c => c.classList.remove("selected"));
+          btn.classList.add("selected");
+        };
+        optsDiv.appendChild(btn);
+      });
     });
 
-    document.getElementById("nextBtn").onclick = () => {
-      if (state.idx + 1 >= state.questions.length) {
-        finishQuiz(state.questions.length);
+    document.getElementById("checkPageBtn").onclick = () => {
+      if (pageQuestions.some((_, i) => state.pageAnswers[i] === undefined)) {
+        document.getElementById("pageWarning").style.display = "block";
+        return;
+      }
+      document.getElementById("pageWarning").style.display = "none";
+      pageQuestions.forEach((q, i) => {
+        const optsDiv = pageDiv.querySelector(`.options[data-qi="${i}"]`);
+        const fb = pageDiv.querySelector(`[data-fb="${i}"]`);
+        const chosen = state.pageAnswers[i];
+        const isCorrect = chosen === q.correctValue;
+        const explanationHtml = q.explanation ? `<div style="margin-top:4px; font-weight:400; color:var(--text-secondary,#7a7a76);">${q.explanation}</div>` : "";
+        [...optsDiv.children].forEach(c => {
+          c.disabled = true;
+          if (c.textContent === q.correctValue) c.classList.add("correct");
+          else if (c.textContent === chosen) c.classList.add("wrong");
+        });
+        fb.style.display = "block";
+        fb.className = "feedback " + (isCorrect ? "correct" : "wrong");
+        fb.innerHTML = (isCorrect ? "Corretto!" : `Sbagliato — risposta giusta: ${q.correctValue}`) + explanationHtml;
+        if (isCorrect) state.score++;
+      });
+      state.pageChecked = true;
+      document.getElementById("checkPageBtn").classList.add("hidden");
+      document.getElementById("nextPageBtn").classList.remove("hidden");
+      document.querySelector(".progress span:last-child").textContent = "Punteggio: " + state.score;
+    };
+
+    document.getElementById("nextPageBtn").onclick = () => {
+      const total = pageStart + pageQuestions.length;
+      if (isLastPage) {
+        finishQuiz(total);
       } else {
-        state.idx++;
-        state.answered = false;
+        state.idx = total;
+        state.pageAnswers = [];
+        state.pageChecked = false;
         render();
       }
+    };
+
+    document.getElementById("exitBtn").onclick = () => {
+      finishQuiz(state.pageChecked ? pageStart + pageQuestions.length : pageStart);
     };
     return;
   }
@@ -949,6 +992,8 @@ function render() {
       state.idx = 0;
       state.score = 0;
       state.answered = false;
+      state.pageAnswers = [];
+      state.pageChecked = false;
       state.screen = "quiz";
       render();
     };
