@@ -207,7 +207,7 @@ function saveResult(mode, score, total) {
 
 // Calcola quante domande sono DAVVERO disponibili per la modalità/capitoli/sotto-modalità correnti.
 function computeFilteredMax() {
-  if (state.mode === "vocab") return VOCAB_ALL.filter(w => w.lesson <= state.maxLesson).length;
+  if (state.mode === "vocab") return vocabCombinedPool(state.maxLesson).length;
   if (state.mode === "kanji") {
     const kCount = KANJI_ALL.filter(k => k.lesson <= state.maxLesson).length;
     return state.subMode === "typing" ? kCount : kCount * 2;
@@ -215,7 +215,6 @@ function computeFilteredMax() {
   if (state.mode === "grammar") return GRAMMAR_ALL.filter(q => q.lesson <= state.maxLesson).length;
   if (state.mode === "verbs") return VERBS_ALL.filter(w => w.lesson <= state.maxLesson).length;
   if (state.mode === "adjectives") return ADJECTIVES_ALL.filter(w => w.lesson <= state.maxLesson).length;
-  if (state.mode === "scrittura") return buildScritturaPool(state.maxLesson).length;
   return 0;
 }
 
@@ -242,10 +241,34 @@ let state = {
 };
 
 // Costruisce N domande di vocabolario (kana/kanji <-> italiano)
+// Pool combinato per il Vocabolario: sostantivi/espressioni + verbi + aggettivi,
+// escludendo le voci "legate" (es. "〜ねんせい") che non ha senso presentare da sole.
+// Usato sia da Traduzione sia da Scrittura, così gestiscono sempre lo stesso totale.
+function vocabCombinedPool(maxLesson) {
+  const combined = [...VOCAB_ALL, ...VERBS_ALL, ...ADJECTIVES_ALL];
+  return combined.filter(w => w.jp && !w.jp.includes("〜") && !w.it.includes("...") && w.lesson <= maxLesson);
+}
+
 function buildVocabQuestions(n) {
-  const fullPool = VOCAB_ALL;
-  const pool = fullPool.filter(w => w.lesson <= state.maxLesson);
+  const fullPool = [...VOCAB_ALL, ...VERBS_ALL, ...ADJECTIVES_ALL].filter(w => w.jp && !w.jp.includes("〜") && !w.it.includes("..."));
+  const pool = vocabCombinedPool(state.maxLesson);
   const words = shuffle(pool).slice(0, Math.min(n, pool.length));
+
+  if (state.subMode === "writing") {
+    return words.map(w => {
+      const displayAnswer = w.kanji ? `${w.kanji} / ${w.jp}` : w.jp;
+      return {
+        promptLabel: "Come si scrive in giapponese?",
+        mainText: w.it,
+        hintText: null,
+        correctValue: w.jp,
+        displayAnswer,
+        acceptedAnswers: [w.jp, w.kanji].filter(Boolean),
+        inputType: "text"
+      };
+    });
+  }
+
   return words.map(w => {
     const dir = Math.random() < 0.5 ? "jp2it" : "it2jp";
     const valueOf = (p) => dir === "jp2it" ? p.it : jpLabel(p);
@@ -568,42 +591,11 @@ function buildAdjConjugationQuestions(n) {
 }
 // ==============================================================================
 
-
-// ===================== SCRITTURA (input libero, match esatto) =====================
-// Pool combinato: Vocabolario + Verbi + Aggettivi, escludendo le voci che sono
-// suffissi/particelle legate (es. "〜ねんせい") che non ha senso scrivere da sole.
-function buildScritturaPool(maxLesson) {
-  const combined = [...VOCAB_ALL, ...VERBS_ALL, ...ADJECTIVES_ALL];
-  const lessonLimit = maxLesson || 10;
-  return combined.filter(w => w.jp && !w.jp.includes("〜") && !w.it.includes("...") && w.lesson <= lessonLimit);
-}
-
-function buildScritturaQuestions(n) {
-  const pool = buildScritturaPool(state.maxLesson);
-  const chosen = shuffle(pool).slice(0, Math.min(n, pool.length));
-  return chosen.map(w => {
-    const accepted = [w.jp, w.kanji].filter(Boolean);
-    // Formato per il feedback: "kanji / かな" se esiste il kanji, altrimenti solo la kana.
-    const displayAnswer = w.kanji ? `${w.kanji} / ${w.jp}` : w.jp;
-    return {
-      promptLabel: "Come si scrive in giapponese?",
-      mainText: w.it,
-      hintText: null,
-      correctValue: w.jp, // valore "principale" usato per il match
-      displayAnswer, // mostrato sempre nel feedback, corretto o sbagliato che sia
-      acceptedAnswers: accepted, // hiragana O kanji, va bene uno dei due
-      inputType: "text"
-    };
-  });
-}
-// ==============================================================================
-
 function buildQuestions(mode, n) {
   if (mode === "kanji") return buildKanjiQuestions(n);
   if (mode === "grammar") return buildGrammarQuestions(n);
   if (mode === "verbs") return buildVerbConjugationQuestions(n);
   if (mode === "adjectives") return buildAdjConjugationQuestions(n);
-  if (mode === "scrittura") return buildScritturaQuestions(n);
   return buildVocabQuestions(n);
 }
 
@@ -626,7 +618,6 @@ function modeTitle(mode) {
   if (mode === "grammar") return "Grammatica";
   if (mode === "verbs") return "Verbi";
   if (mode === "adjectives") return "Aggettivi";
-  if (mode === "scrittura") return "Scrittura";
   return "Vocabolario";
 }
 
@@ -639,9 +630,9 @@ function render() {
       title: "Vocabolario",
       lessons: "Lezioni 1-12",
       maxLesson: 12,
-      max: VOCAB_ALL.length,
-      menuLabel: `Vocabolario (${VOCAB_ALL.length} parole)`,
-      countLabel: `${VOCAB_ALL.length} vocaboli disponibili`,
+      max: vocabCombinedPool(12).length,
+      menuLabel: `Vocabolario (${vocabCombinedPool(12).length} parole)`,
+      countLabel: `${vocabCombinedPool(12).length} vocaboli disponibili`,
       setupQuestion: "Quanti vocaboli vuoi testare?"
     },
     kanji: {
@@ -686,15 +677,6 @@ function render() {
       setupQuestion: state.subMode === "translationOnly"
         ? "Quanti aggettivi vuoi ripassare? (ognuno = 1 domanda: solo significato)"
         : "Quanti aggettivi vuoi ripassare? (ognuno = 3 domande: tipo, forma, significato)"
-    },
-    scrittura: {
-      title: "Scrittura",
-      lessons: "Lezioni 1-12",
-      maxLesson: 12,
-      max: buildScritturaPool().length,
-      menuLabel: `Scrittura (${buildScritturaPool().length} parole, scrivi tu la risposta)`,
-      countLabel: `${buildScritturaPool().length} parole disponibili`,
-      setupQuestion: "Quante parole vuoi scrivere?"
     }
   };
 
@@ -712,14 +694,12 @@ function render() {
         <button id="verbsBtn" class="secondary">${MODES.verbs.menuLabel}</button>
         <div style="height:10px"></div>
         <button id="adjectivesBtn" class="secondary">${MODES.adjectives.menuLabel}</button>
-        <div style="height:10px"></div>
-        <button id="scritturaBtn" class="secondary">${MODES.scrittura.menuLabel}</button>
       </div>
     `;
-    ["vocab", "kanji", "grammar", "verbs", "adjectives", "scrittura"].forEach(m => {
+    ["vocab", "kanji", "grammar", "verbs", "adjectives"].forEach(m => {
       document.getElementById(m + "Btn").onclick = () => {
         state.mode = m;
-        if (m === "verbs" || m === "adjectives" || m === "kanji") {
+        if (m === "verbs" || m === "adjectives" || m === "kanji" || m === "vocab") {
           state.screen = "subMode";
         } else {
           state.screen = "chapters";
@@ -732,11 +712,13 @@ function render() {
 
   if (state.screen === "subMode") {
     const cfg = MODES[state.mode];
-    const isKanji = state.mode === "kanji";
-    const optA = isKanji ? "Scelta multipla" : "Traduzione e coniugazione";
-    const optB = isKanji ? "Scrittura" : "Solo traduzione";
-    const valA = isKanji ? "choice" : "full";
-    const valB = isKanji ? "typing" : "translationOnly";
+    const SUBMODE_OPTIONS = {
+      kanji: { optA: "Scelta multipla", optB: "Scrittura", valA: "choice", valB: "typing" },
+      vocab: { optA: "Traduzione", optB: "Scrittura", valA: "choice", valB: "writing" },
+      verbs: { optA: "Traduzione e coniugazione", optB: "Solo traduzione", valA: "full", valB: "translationOnly" },
+      adjectives: { optA: "Traduzione e coniugazione", optB: "Solo traduzione", valA: "full", valB: "translationOnly" }
+    };
+    const { optA, optB, valA, valB } = SUBMODE_OPTIONS[state.mode];
     app.innerHTML = `
       <h1>Genki I &mdash; ${cfg.title}</h1>
       <p class="subtitle">Come vuoi allenarti?</p>
@@ -811,7 +793,7 @@ function render() {
       };
     });
     document.getElementById("backToModeBtn").onclick = () => {
-      state.screen = (state.mode === "verbs" || state.mode === "adjectives" || state.mode === "kanji") ? "subMode" : "mode";
+      state.screen = (state.mode === "verbs" || state.mode === "adjectives" || state.mode === "kanji" || state.mode === "vocab") ? "subMode" : "mode";
       render();
     };
     return;
