@@ -139,7 +139,7 @@
     font-weight: 500;
   }
   .feedback.correct { color: #27500a; }
-  .feedback.wrong { color: #791f1f; }
+  .feedback.wrong { color: #791f1f; font-size: 16px; font-weight: 700; }
   .score-big {
     font-size: 40px;
     font-weight: 700;
@@ -814,62 +814,83 @@ function render() {
       : `Domanda ${state.idx + 1} / ${state.questions.length}`;
 
     if (q.inputType === "text") {
+      // ===== Modalità "esame" anche per la Scrittura: una PAGINA di più domande insieme =====
+      const PAGE_SIZE = 10;
+      const pageStart = state.idx;
+      const pageQuestions = state.questions.slice(pageStart, pageStart + PAGE_SIZE);
+      const isLastPage = pageStart + pageQuestions.length >= state.questions.length;
+
       app.innerHTML = `
         <div class="progress">
-          <span>${progressLabel}</span>
+          <span>Domande ${pageStart + 1}-${pageStart + pageQuestions.length} / ${state.questions.length}</span>
           <span>Punteggio: ${state.score}</span>
         </div>
-        <div class="question-box">
-          <p class="question-hint">${q.promptLabel}</p>
-          <p class="question-text">${q.mainText}</p>
-        </div>
-        <input type="text" id="textAnswer" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
-          placeholder="Scrivi qui in hiragana o kanji..."
-          style="width:100%; padding:14px; font-size:18px; border-radius:10px; border:1.5px solid #e0ddd6; margin-bottom:12px;">
-        <button id="submitBtn">Controlla</button>
-        <div class="feedback" id="feedback"></div>
-        <button id="nextBtn" class="hidden">Prossima domanda</button>
+        <div id="pageQuestions"></div>
+        <div id="pageWarning" style="color:var(--text-danger,#a32d2d); font-size:14px; margin-bottom:8px; display:none;">Rispondi a tutte le domande prima di correggere.</div>
+        <button id="checkPageBtn">Correggi pagina</button>
+        <button id="nextPageBtn" class="hidden">${isLastPage ? "Vedi risultati" : "Pagina successiva &rarr;"}</button>
         <button id="exitBtn" class="secondary">Esci</button>
       `;
 
-      const input = document.getElementById("textAnswer");
-      input.focus();
-
-      document.getElementById("exitBtn").onclick = () => {
-        finishQuiz(state.answered ? state.idx + 1 : state.idx);
-      };
-
-      const checkAnswer = () => {
-        if (state.answered) return;
-        const typed = input.value.trim();
-        if (!typed) return;
-        state.answered = true;
-        input.disabled = true;
-        document.getElementById("submitBtn").disabled = true;
-        const isCorrect = q.acceptedAnswers.includes(typed);
-        const feedback = document.getElementById("feedback");
-        if (isCorrect) {
-          state.score++;
-          feedback.textContent = `Corretto! Risposta corretta: ${q.displayAnswer}`;
-          feedback.className = "feedback correct";
-        } else {
-          feedback.textContent = `Sbagliato — risposta corretta: ${q.displayAnswer}`;
-          feedback.className = "feedback wrong";
-        }
-        document.getElementById("nextBtn").classList.remove("hidden");
-      };
-
-      document.getElementById("submitBtn").onclick = checkAnswer;
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") checkAnswer();
+      const pageDiv = document.getElementById("pageQuestions");
+      pageQuestions.forEach((q, i) => {
+        const card = document.createElement("div");
+        card.className = "question-box";
+        card.style.marginBottom = "12px";
+        card.innerHTML = `
+          <p class="question-hint">${q.promptLabel}</p>
+          <p class="question-text">${q.mainText}</p>
+          <input type="text" class="textAnswer" data-qi="${i}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+            placeholder="Scrivi qui in hiragana o kanji..."
+            style="width:100%; padding:12px; font-size:17px; border-radius:10px; border:1.5px solid #e0ddd6; margin-top:8px;">
+          <div class="feedback" data-fb="${i}" style="display:none;"></div>
+        `;
+        pageDiv.appendChild(card);
       });
 
-      document.getElementById("nextBtn").onclick = () => {
-        if (state.idx + 1 >= state.questions.length) {
-          finishQuiz(state.questions.length);
+      const inputs = [...pageDiv.querySelectorAll(".textAnswer")];
+      if (inputs[0]) inputs[0].focus();
+
+      document.getElementById("exitBtn").onclick = () => {
+        finishQuiz(state.pageChecked ? pageStart + pageQuestions.length : pageStart);
+      };
+
+      document.getElementById("checkPageBtn").onclick = () => {
+        if (inputs.some(inp => inp.value.trim() === "")) {
+          document.getElementById("pageWarning").style.display = "block";
+          return;
+        }
+        document.getElementById("pageWarning").style.display = "none";
+        pageQuestions.forEach((q, i) => {
+          const input = inputs[i];
+          const fb = pageDiv.querySelector(`[data-fb="${i}"]`);
+          const typed = input.value.trim();
+          const isCorrect = q.acceptedAnswers.includes(typed);
+          input.disabled = true;
+          fb.style.display = "block";
+          if (isCorrect) {
+            state.score++;
+            fb.textContent = `Corretto! Risposta corretta: ${q.displayAnswer}`;
+            fb.className = "feedback correct";
+          } else {
+            fb.textContent = `Sbagliato — risposta corretta: ${q.displayAnswer}`;
+            fb.className = "feedback wrong";
+          }
+        });
+        state.pageChecked = true;
+        document.getElementById("checkPageBtn").classList.add("hidden");
+        document.getElementById("nextPageBtn").classList.remove("hidden");
+        document.querySelector(".progress span:last-child").textContent = "Punteggio: " + state.score;
+      };
+
+      document.getElementById("nextPageBtn").onclick = () => {
+        const total = pageStart + pageQuestions.length;
+        if (isLastPage) {
+          finishQuiz(total);
         } else {
-          state.idx++;
-          state.answered = false;
+          state.idx = total;
+          state.pageAnswers = [];
+          state.pageChecked = false;
           render();
         }
       };
