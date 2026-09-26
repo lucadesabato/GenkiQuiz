@@ -304,6 +304,18 @@ function buildKanjiExampleQuestions(pool, count) {
 // Costruisce N domande sui kanji, mescolando i due tipi
 function buildKanjiQuestions(n) {
   const pool = KANJI_ALL.filter(k => k.lesson <= state.maxLesson);
+
+  if (state.subMode === "drawing") {
+    const chosen = shuffle(pool).slice(0, Math.min(n, pool.length));
+    return chosen.map(k => ({
+      promptLabel: "Disegna questo kanji:",
+      mainText: `${k.onkun} — ${k.meaning}`,
+      hintText: null,
+      targetKanji: k.kanji,
+      inputType: "draw"
+    }));
+  }
+
   const half = Math.round(n / 2);
   const readingQs = buildKanjiReadingQuestions(pool, half);
   const exampleQs = buildKanjiExampleQuestions(pool, n - half);
@@ -614,7 +626,9 @@ function render() {
       max: KANJI_ALL.length * 2, // metà domande "lettura", metà "esempio"
       menuLabel: `Kanji (${KANJI_ALL.length} kanji, Lez. 3-12)`,
       countLabel: `${KANJI_ALL.length} kanji disponibili`,
-      setupQuestion: "Quante domande vuoi (lettura + esempi)?"
+      setupQuestion: state.subMode === "drawing"
+        ? "Quanti kanji vuoi disegnare?"
+        : "Quante domande vuoi (lettura + esempi)?"
     },
     grammar: {
       title: "Grammatica",
@@ -679,7 +693,7 @@ function render() {
     ["vocab", "kanji", "grammar", "verbs", "adjectives", "scrittura"].forEach(m => {
       document.getElementById(m + "Btn").onclick = () => {
         state.mode = m;
-        if (m === "verbs" || m === "adjectives") {
+        if (m === "verbs" || m === "adjectives" || m === "kanji") {
           state.screen = "subMode";
         } else {
           state.screen = "chapters";
@@ -692,23 +706,28 @@ function render() {
 
   if (state.screen === "subMode") {
     const cfg = MODES[state.mode];
+    const isKanji = state.mode === "kanji";
+    const optA = isKanji ? "Scelta multipla" : "Traduzione e coniugazione";
+    const optB = isKanji ? "Scrittura a mano" : "Solo traduzione";
+    const valA = isKanji ? "choice" : "full";
+    const valB = isKanji ? "drawing" : "translationOnly";
     app.innerHTML = `
       <h1>Genki I &mdash; ${cfg.title}</h1>
       <p class="subtitle">Come vuoi allenarti?</p>
       <div class="card">
-        <button id="fullModeBtn">Traduzione e coniugazione</button>
+        <button id="fullModeBtn">${optA}</button>
         <div style="height:10px"></div>
-        <button id="translationModeBtn" class="secondary">Solo traduzione</button>
+        <button id="translationModeBtn" class="secondary">${optB}</button>
       </div>
       <button id="backToModeBtn0" class="secondary">&larr; Torna al menu</button>
     `;
     document.getElementById("fullModeBtn").onclick = () => {
-      state.subMode = "full";
+      state.subMode = valA;
       state.screen = "chapters";
       render();
     };
     document.getElementById("translationModeBtn").onclick = () => {
-      state.subMode = "translationOnly";
+      state.subMode = valB;
       state.screen = "chapters";
       render();
     };
@@ -748,7 +767,7 @@ function render() {
       };
     });
     document.getElementById("backToModeBtn").onclick = () => {
-      state.screen = (state.mode === "verbs" || state.mode === "adjectives") ? "subMode" : "mode";
+      state.screen = (state.mode === "verbs" || state.mode === "adjectives" || state.mode === "kanji") ? "subMode" : "mode";
       render();
     };
     return;
@@ -759,7 +778,10 @@ function render() {
     // Ricalcola quante domande sono DAVVERO disponibili con i capitoli selezionati
     const filteredMax = (() => {
       if (state.mode === "vocab") return VOCAB_ALL.filter(w => w.lesson <= state.maxLesson).length;
-      if (state.mode === "kanji") return KANJI_ALL.filter(k => k.lesson <= state.maxLesson).length * 2;
+      if (state.mode === "kanji") {
+        const kCount = KANJI_ALL.filter(k => k.lesson <= state.maxLesson).length;
+        return state.subMode === "drawing" ? kCount : kCount * 2;
+      }
       if (state.mode === "grammar") return GRAMMAR_ALL.filter(q => q.lesson <= state.maxLesson).length;
       if (state.mode === "verbs") return VERBS_ALL.filter(w => w.lesson <= state.maxLesson).length;
       if (state.mode === "adjectives") return ADJECTIVES_ALL.filter(w => w.lesson <= state.maxLesson).length;
@@ -827,6 +849,116 @@ function render() {
     const progressLabel = q.groupIndex
       ? `Parola ${q.groupIndex} / ${q.groupTotal} &middot; passo ${q.stepInGroup}/${q.stepsInGroup}`
       : `Domanda ${state.idx + 1} / ${state.questions.length}`;
+
+    if (q.inputType === "draw") {
+      app.innerHTML = `
+        <div class="progress">
+          <span>${progressLabel}</span>
+          <span>Punteggio: ${state.score}</span>
+        </div>
+        <div class="question-box">
+          <p class="question-hint">${q.promptLabel}</p>
+          <p class="question-text">${q.mainText}</p>
+        </div>
+        <div style="display:flex; justify-content:center; margin:14px 0;">
+          <canvas id="drawCanvas" width="260" height="260"
+            style="border:2px solid #e0ddd6; border-radius:10px; touch-action:none; background:#fff;"></canvas>
+        </div>
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+          <button id="clearBtn" class="secondary" style="flex:1;">Cancella</button>
+          <button id="revealBtn" style="flex:1;">Mostra risposta</button>
+        </div>
+        <div id="revealArea"></div>
+        <div class="feedback" id="feedback"></div>
+        <button id="nextBtn" class="hidden">Prossima domanda</button>
+      `;
+
+      const canvas = document.getElementById("drawCanvas");
+      const ctx = canvas.getContext("2d");
+
+      function drawGrid() {
+        ctx.clearRect(0, 0, 260, 260);
+        ctx.strokeStyle = "#eee";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(130, 0); ctx.lineTo(130, 260);
+        ctx.moveTo(0, 130); ctx.lineTo(260, 130);
+        ctx.stroke();
+        ctx.strokeStyle = "#2c2c2a";
+        ctx.lineWidth = 6;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+      }
+      drawGrid();
+
+      let drawing = false;
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: clientX - rect.left, y: clientY - rect.top };
+      }
+      function start(e) {
+        drawing = true;
+        const p = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        e.preventDefault();
+      }
+      function move(e) {
+        if (!drawing) return;
+        const p = getPos(e);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        e.preventDefault();
+      }
+      function stop() { drawing = false; }
+
+      canvas.addEventListener("mousedown", start);
+      canvas.addEventListener("mousemove", move);
+      window.addEventListener("mouseup", stop);
+      canvas.addEventListener("touchstart", start, { passive: false });
+      canvas.addEventListener("touchmove", move, { passive: false });
+      canvas.addEventListener("touchend", stop);
+
+      document.getElementById("clearBtn").onclick = drawGrid;
+
+      document.getElementById("revealBtn").onclick = () => {
+        document.getElementById("revealArea").innerHTML = `
+          <div style="text-align:center; font-size:96px; line-height:1.2; margin:10px 0; font-family:'Hiragino Mincho ProN', serif;">${q.targetKanji}</div>
+          <p style="text-align:center; color:#7a7a76; margin-top:0;">Confronta con il tuo disegno: sei stato preciso?</p>
+          <div style="display:flex; gap:8px;">
+            <button id="rightBtn" style="flex:1;">Giusto ✓</button>
+            <button id="wrongBtn" class="secondary" style="flex:1;">Sbagliato ✗</button>
+          </div>
+        `;
+        document.getElementById("revealBtn").classList.add("hidden");
+        document.getElementById("clearBtn").classList.add("hidden");
+
+        const finalize = (gotItRight) => {
+          if (state.answered) return;
+          state.answered = true;
+          if (gotItRight) state.score++;
+          document.getElementById("rightBtn").disabled = true;
+          document.getElementById("wrongBtn").disabled = true;
+          document.getElementById("nextBtn").classList.remove("hidden");
+        };
+        document.getElementById("rightBtn").onclick = () => finalize(true);
+        document.getElementById("wrongBtn").onclick = () => finalize(false);
+      };
+
+      document.getElementById("nextBtn").onclick = () => {
+        if (state.idx + 1 >= state.questions.length) {
+          saveResult(modeTitle(state.mode), state.score, state.questions.length);
+          state.screen = "results";
+        } else {
+          state.idx++;
+          state.answered = false;
+        }
+        render();
+      };
+      return;
+    }
 
     if (q.inputType === "text") {
       app.innerHTML = `
