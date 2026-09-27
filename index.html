@@ -606,11 +606,21 @@ function buildQuestions(mode, n) {
 }
 
 // Costruisce N domande di grammatica pescando dal pool già pronto (GRAMMAR_ALL), filtrate per lezione
+// Per questi tipi di domanda, il nome della regola grammaticale (q.point) coincide quasi
+// sempre con la risposta stessa (es. point:"Particella を" + chiedi "quale particella?").
+// Per non svelarla, mostriamo un'istruzione generica invece del nome della regola.
+const GENERIC_GRAMMAR_LABELS = {
+  particle: "Quale particella completa la frase?",
+  fill_answer: "Completa la frase",
+  transform: "Trasforma la frase come indicato",
+  spot_error: "Individua la frase sbagliata"
+};
+
 function buildGrammarQuestions(n) {
   const pool = GRAMMAR_ALL.filter(q => q.lesson <= state.maxLesson);
   const chosen = shuffle(pool).slice(0, Math.min(n, pool.length));
   return chosen.map(q => ({
-    promptLabel: q.point,
+    promptLabel: GENERIC_GRAMMAR_LABELS[q.type] || q.point,
     mainText: q.prompt,
     hintText: null,
     correctValue: q.correct,

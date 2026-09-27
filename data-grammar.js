@@ -543,7 +543,7 @@ const GRAMMAR_L12 = [
    correct:"Non ho dormito ieri notte perché avevo molti compiti",
    explanation:"ので introduce la ragione, in modo simile a から ma più formale."},
   {lesson:12, point:"〜ので (perché, più formale di から)", type:"fill_answer",
-   prompt:"今日（きょう）は日曜日（にちようび）___、銀行（ぎんこう）は休み（やすみ）です。 (con un nome, servono forma な)",
+   prompt:"今日（きょう）は日曜日（にちようび）___、銀行（ぎんこう）は休み（やすみ）です。",
    options:["なので", "ので", "だので", "のので"],
    correct:"なので",
    explanation:"Dopo un nome (o な-aggettivo) al presente affermativo, な si inserisce prima di ので, proprio come per んです."},
