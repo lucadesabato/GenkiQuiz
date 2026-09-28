@@ -907,20 +907,20 @@ function render() {
       return;
     }
 
-    // ===== Modalità "esame": una PAGINA di più domande a scelta multipla insieme =====
+    // ===== Modalità "esame": una PAGINA di più domande a scelta multipla =====
+    // Ogni risposta viene corretta SUBITO appena la tocchi, poi passi alla successiva.
     const PAGE_SIZE = 10;
     const pageStart = state.idx;
     const pageQuestions = state.questions.slice(pageStart, pageStart + PAGE_SIZE);
     const isLastPage = pageStart + pageQuestions.length >= state.questions.length;
+    const answeredCount = () => state.pageAnswers.filter(a => a !== undefined).length;
 
     app.innerHTML = `
       <div class="progress">
         <span>Domande ${pageStart + 1}-${pageStart + pageQuestions.length} / ${state.questions.length}</span>
-        <span>Punteggio: ${state.score}</span>
+        <span id="scoreLabel">Punteggio: ${state.score}</span>
       </div>
       <div id="pageQuestions"></div>
-      <div id="pageWarning" style="color:var(--text-danger,#a32d2d); font-size:14px; margin-bottom:8px; display:none;">Rispondi a tutte le domande prima di correggere.</div>
-      <button id="checkPageBtn">Correggi pagina</button>
       <button id="nextPageBtn" class="hidden">${isLastPage ? "Vedi risultati" : "Pagina successiva &rarr;"}</button>
       <button id="exitBtn" class="secondary">Esci</button>
     `;
@@ -943,47 +943,33 @@ function render() {
       `;
       pageDiv.appendChild(card);
       const optsDiv = card.querySelector(`.options[data-qi="${i}"]`);
+      const fb = card.querySelector(`[data-fb="${i}"]`);
       q.options.forEach(opt => {
         const btn = document.createElement("button");
         btn.className = "option";
         btn.textContent = opt;
         btn.onclick = () => {
-          if (state.pageChecked) return;
+          if (state.pageAnswers[i] !== undefined) return; // già risposto a questa
           state.pageAnswers[i] = opt;
-          [...optsDiv.children].forEach(c => c.classList.remove("selected"));
-          btn.classList.add("selected");
+          const isCorrect = opt === q.correctValue;
+          const explanationHtml = q.explanation ? `<div style="margin-top:4px; font-weight:400; color:var(--text-secondary,#7a7a76);">${q.explanation}</div>` : "";
+          [...optsDiv.children].forEach(c => {
+            c.disabled = true;
+            if (c.textContent === q.correctValue) c.classList.add("correct");
+            else if (c === btn) c.classList.add("wrong");
+          });
+          fb.style.display = "block";
+          fb.className = "feedback " + (isCorrect ? "correct" : "wrong");
+          fb.innerHTML = (isCorrect ? "Corretto!" : `Sbagliato — risposta giusta: ${q.correctValue}`) + explanationHtml;
+          if (isCorrect) state.score++;
+          document.getElementById("scoreLabel").textContent = "Punteggio: " + state.score;
+          if (answeredCount() === pageQuestions.length) {
+            document.getElementById("nextPageBtn").classList.remove("hidden");
+          }
         };
         optsDiv.appendChild(btn);
       });
     });
-
-    document.getElementById("checkPageBtn").onclick = () => {
-      if (pageQuestions.some((_, i) => state.pageAnswers[i] === undefined)) {
-        document.getElementById("pageWarning").style.display = "block";
-        return;
-      }
-      document.getElementById("pageWarning").style.display = "none";
-      pageQuestions.forEach((q, i) => {
-        const optsDiv = pageDiv.querySelector(`.options[data-qi="${i}"]`);
-        const fb = pageDiv.querySelector(`[data-fb="${i}"]`);
-        const chosen = state.pageAnswers[i];
-        const isCorrect = chosen === q.correctValue;
-        const explanationHtml = q.explanation ? `<div style="margin-top:4px; font-weight:400; color:var(--text-secondary,#7a7a76);">${q.explanation}</div>` : "";
-        [...optsDiv.children].forEach(c => {
-          c.disabled = true;
-          if (c.textContent === q.correctValue) c.classList.add("correct");
-          else if (c.textContent === chosen) c.classList.add("wrong");
-        });
-        fb.style.display = "block";
-        fb.className = "feedback " + (isCorrect ? "correct" : "wrong");
-        fb.innerHTML = (isCorrect ? "Corretto!" : `Sbagliato — risposta giusta: ${q.correctValue}`) + explanationHtml;
-        if (isCorrect) state.score++;
-      });
-      state.pageChecked = true;
-      document.getElementById("checkPageBtn").classList.add("hidden");
-      document.getElementById("nextPageBtn").classList.remove("hidden");
-      document.querySelector(".progress span:last-child").textContent = "Punteggio: " + state.score;
-    };
 
     document.getElementById("nextPageBtn").onclick = () => {
       const total = pageStart + pageQuestions.length;
@@ -997,8 +983,9 @@ function render() {
       }
     };
 
+    // "Esci": conta le domande a cui hai già risposto in questa pagina
     document.getElementById("exitBtn").onclick = () => {
-      finishQuiz(state.pageChecked ? pageStart + pageQuestions.length : pageStart);
+      finishQuiz(pageStart + answeredCount());
     };
     return;
   }
