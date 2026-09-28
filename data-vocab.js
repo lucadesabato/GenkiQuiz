@@ -307,7 +307,7 @@ const VOCAB = {
     {jp:"およぐ", kanji:"泳ぐ", ro:null, it:"nuotare"},
     {jp:"きく", kanji:"聞く", ro:null, it:"chiedere"},
     {jp:"のる", kanji:"乗る", ro:null, it:"salire su (mezzo)"},
-    {jp:"やる", kanji:null, ro:null, it:"fare"},
+    {jp:"やる", kanji:null, ro:null, it:"fare (informale)"},
     {jp:"でかける", kanji:"出かける", ro:null, it:"uscire"},
     {jp:"いっしょに", kanji:"一緒に", ro:null, it:"insieme"},
     {jp:"すごく", kanji:null, ro:null, it:"estremamente"},
@@ -358,7 +358,7 @@ const VOCAB = {
     {jp:"つける", kanji:null, ro:null, it:"accendere"},
     {jp:"でんわする", kanji:"電話する", ro:null, it:"telefonare"},
     {jp:"つれてくる", kanji:"連れてくる", ro:null, it:"portare (una persona)"},
-    {jp:"もってくる", kanji:"持ってくる", ro:null, it:"portare (una cosa)"},
+    {jp:"もってくる", kanji:"持ってくる", ro:null, it:"portare qui (una cosa)"},
     {jp:"あとで", kanji:"後で", ro:null, it:"più tardi"},
     {jp:"すぐ", kanji:null, ro:null, it:"subito"},
     {jp:"ゆっくり", kanji:null, ro:null, it:"lentamente"},
@@ -479,7 +479,7 @@ const VOCAB = {
     {jp:"きる", kanji:"切る", ro:null, it:"tagliare"},
     {jp:"つくる", kanji:"作る", ro:null, it:"fare/produrre; creare"},
     {jp:"（あめ/ゆきが）ふる", kanji:"（雨/雪が）降る", ro:null, it:"piovere/nevicare"},
-    {jp:"もっていく", kanji:"持っていく", ro:null, it:"portare (una cosa)"},
+    {jp:"もっていく", kanji:"持っていく", ro:null, it:"portare via (una cosa)"},
     {jp:"すてる", kanji:"捨てる", ro:null, it:"buttare via"},
     {jp:"はじめる", kanji:"始める", ro:null, it:"iniziare"},
     {jp:"うんてんする", kanji:"運転する", ro:null, it:"guidare"},
@@ -816,10 +816,33 @@ const VOCAB = {
 // Pool combinato di tutto il vocabolario dalla Lezione 1 alla Lezione 12.
 // Ogni parola riceve un campo "lesson" per permettere di filtrare per capitolo nel quiz.
 function withLesson(arr, n) { return arr.map(w => ({ ...w, lesson: n })); }
-const VOCAB_ALL = [
+const VOCAB_ALL_RAW = [
   ...withLesson(VOCAB.lezione1, 1), ...withLesson(VOCAB.lezione2, 2), ...withLesson(VOCAB.lezione3, 3),
   ...withLesson(VOCAB.lezione4, 4), ...withLesson(VOCAB.lezione5, 5), ...withLesson(VOCAB.lezione6, 6),
   ...withLesson(VOCAB.lezione7, 7), ...withLesson(VOCAB.lezione8, 8), ...withLesson(VOCAB.lezione9, 9),
   ...withLesson(VOCAB.lezione10, 10), ...withLesson(VOCAB.utili4, 4),
   ...withLesson(VOCAB.lezione11, 11), ...withLesson(VOCAB.lezione12, 12)
 ];
+
+// Il libro ripete alcune parole in più lezioni (a volte una volta con kanji e una senza):
+// le unisco in una sola voce (tengo la lezione più bassa e il kanji, se c'è), altrimenti
+// la stessa parola potrebbe comparire due volte tra le opzioni di una domanda.
+const VOCAB_ALL = (() => {
+  const seen = new Map();
+  const out = [];
+  VOCAB_ALL_RAW.forEach(w => {
+    const key = w.jp + "|" + w.it;
+    const prev = seen.get(key);
+    if (!prev) {
+      const copy = { ...w };
+      seen.set(key, copy);
+      out.push(copy);
+    } else {
+      if (!prev.kanji && w.kanji) prev.kanji = w.kanji;
+      if (!prev.cat && w.cat) prev.cat = w.cat;
+      if (!prev.ro && w.ro) prev.ro = w.ro;
+      if (w.lesson < prev.lesson) prev.lesson = w.lesson;
+    }
+  });
+  return out;
+})();

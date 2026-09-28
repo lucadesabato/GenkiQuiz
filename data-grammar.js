@@ -515,7 +515,7 @@ const GRAMMAR_L12 = [
   {lesson:12, point:"〜んです (spiegare una situazione)", type:"transform",
    prompt:"Come diventa una spiegazione (〜んです) la frase 「学生（がくせい）です」?",
    options:["学生（がくせい）なんです", "学生（がくせい）んです", "学生（がくせい）だんです", "学生（がくせい）のです"],
-   correct:"学生なんです",
+   correct:"学生（がくせい）なんです",
    explanation:"Dopo un nome o un な-aggettivo al presente affermativo, な si inserisce prima di んです."},
   {lesson:12, point:"〜すぎる (troppo)", type:"translate_jp_it",
    prompt:"この本（ほん）は高すぎます（たかすぎます）。",

@@ -196,6 +196,21 @@ function shuffle(arr) {
   return a;
 }
 
+// Sceglie fino a n valori DIVERSI tra loro (e diversi da quelli in "exclude"),
+// così le opzioni di una domanda non possono mai avere due risposte uguali.
+function distinctPick(pool, valueFn, exclude, n) {
+  const seen = new Set(exclude);
+  const out = [];
+  for (const item of shuffle(pool)) {
+    const v = valueFn(item);
+    if (v === undefined || v === null || v === "" || seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+    if (out.length >= n) break;
+  }
+  return out;
+}
+
 function loadHistory() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -262,14 +277,17 @@ function buildVocabQuestions(n) {
 
   if (state.subMode === "writing") {
     return words.map(w => {
-      const displayAnswer = w.kanji ? `${w.kanji} / ${w.jp}` : w.jp;
+      // Parole diverse con lo stesso significato (es. はい / ええ = "sì") sono tutte risposte valide
+      const alts = fullPool.filter(p => p.it === w.it);
+      const acceptedAnswers = [...new Set(alts.flatMap(p => [p.jp, p.kanji]).filter(Boolean))];
+      const displayAnswer = [...new Set(alts.map(p => p.kanji ? `${p.kanji} / ${p.jp}` : p.jp))].join("   oppure   ");
       return {
         promptLabel: "Come si scrive in giapponese?",
         mainText: w.it,
         hintText: null,
         correctValue: w.jp,
         displayAnswer,
-        acceptedAnswers: [w.jp, w.kanji].filter(Boolean),
+        acceptedAnswers,
         inputType: "text"
       };
     });
@@ -285,12 +303,15 @@ function buildVocabQuestions(n) {
     // da eliminare a colpo d'occhio rispetto a parole scelte a caso da tutto il pool.
     // I distrattori pescano dal pool COMPLETO (non filtrato per lezione), solo la parola
     // da indovinare è limitata alle lezioni selezionate.
-    let candidatePool = fullPool.filter(p => valueOf(p) !== correctValue);
+    // Escludo le parole con lo stesso significato della risposta giusta (sarebbero corrette anche loro)
+    const usable = fullPool.filter(p => p.it !== w.it);
+    let distractors = [];
     if (w.cat) {
-      const sameCat = candidatePool.filter(p => p.cat === w.cat);
-      if (sameCat.length >= 3) candidatePool = sameCat;
+      distractors = distinctPick(usable.filter(p => p.cat === w.cat), valueOf, [correctValue], 3);
     }
-    const distractors = shuffle(candidatePool).slice(0, 3).map(valueOf);
+    if (distractors.length < 3) {
+      distractors = distractors.concat(distinctPick(usable, valueOf, [correctValue, ...distractors], 3 - distractors.length));
+    }
     const options = shuffle([correctValue, ...distractors]);
     return {
       promptLabel: dir === "jp2it" ? "Cosa significa?" : "Come si dice in giapponese?",
@@ -418,11 +439,21 @@ function buildTeUsageQuestion(w) {
     const mainText = w.forms.te + "、" + w2.forms.masu + "。";
     const correctValue = capitalize(w.meanings.masu) + " e poi " + w2.meanings.masu;
     const swapped = capitalize(w2.meanings.masu) + " e poi " + w.meanings.masu;
-    const others2 = VERBS_ALL.filter(v => v.teUses && v !== w && v !== w2);
-    const extra = shuffle(others2).slice(0, 2);
-    const distractor2 = capitalize(w.meanings.masu) + " e poi " + (extra[0] ? extra[0].meanings.masu : w2.meanings.masen);
-    const distractor3 = capitalize((extra[1] || extra[0] || w2).meanings.masu) + " e poi " + w2.meanings.masu;
-    const options = shuffle([...new Set([correctValue, swapped, distractor2, distractor3])]);
+    const others2 = shuffle(VERBS_ALL.filter(v => v.teUses && v !== w && v !== w2));
+    const candidates = [swapped];
+    others2.slice(0, 8).forEach(v => {
+      candidates.push(capitalize(w.meanings.masu) + " e poi " + v.meanings.masu);
+      candidates.push(capitalize(v.meanings.masu) + " e poi " + w2.meanings.masu);
+    });
+    const seenOpts = new Set([correctValue]);
+    const opts = [correctValue];
+    for (const cnd of candidates) {
+      if (seenOpts.has(cnd)) continue;
+      seenOpts.add(cnd);
+      opts.push(cnd);
+      if (opts.length === 4) break;
+    }
+    const options = shuffle(opts);
     return {
       promptLabel: "Cosa significa questa frase (due azioni collegate)?",
       mainText,
@@ -436,7 +467,7 @@ function buildTeUsageQuestion(w) {
   const mainText = w.forms.te + suffix;
   const correctValue = w.teUses[pattern];
   const otherPool = VERBS_ALL.filter(v => v.teUses && v !== w);
-  const distractors = shuffle(otherPool).slice(0, 3).map(v => v.teUses[pattern]);
+  const distractors = distinctPick(otherPool, v => v.teUses[pattern], [correctValue], 3);
   const promptLabel = pattern === "request" ? "Cosa significa questa richiesta?"
     : pattern === "permission" ? "Cosa significa questo permesso?"
     : "Cosa significa questa azione in corso?";
@@ -542,8 +573,7 @@ function buildAdjGroup(w) {
 // Costruisce UNA domanda di sola traduzione per una parola (usata in modalità "Solo traduzione")
 function buildTranslationOnlyQuestion(w, pool) {
   const correct = w.it;
-  const otherPool = pool.filter(p => p.it !== correct);
-  const distractors = shuffle(otherPool).slice(0, 3).map(p => p.it);
+  const distractors = distinctPick(pool, p => p.it, [correct], 3);
   return {
     promptLabel: "Cosa significa?",
     mainText: jpLabel(w),
