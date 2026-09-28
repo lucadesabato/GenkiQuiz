@@ -909,15 +909,21 @@ function render() {
 
     // ===== Modalità "esame": una PAGINA di più domande a scelta multipla =====
     // Ogni risposta viene corretta SUBITO appena la tocchi, poi passi alla successiva.
-    const PAGE_SIZE = 10;
+    // Con la coniugazione ogni parola ha 3 domande collegate: la pagina è un multiplo di 3
+    // (10 parole = 30 domande) così un gruppo non viene mai spezzato tra due pagine.
+    const stepsPerWord = state.questions[0].stepsInGroup || 1;
+    const PAGE_SIZE = 10 * stepsPerWord;
     const pageStart = state.idx;
     const pageQuestions = state.questions.slice(pageStart, pageStart + PAGE_SIZE);
     const isLastPage = pageStart + pageQuestions.length >= state.questions.length;
     const answeredCount = () => state.pageAnswers.filter(a => a !== undefined).length;
+    const pageLabel = stepsPerWord > 1
+      ? `Parole ${pageQuestions[0].groupIndex}-${pageQuestions[pageQuestions.length - 1].groupIndex} / ${pageQuestions[0].groupTotal}`
+      : `Domande ${pageStart + 1}-${pageStart + pageQuestions.length} / ${state.questions.length}`;
 
     app.innerHTML = `
       <div class="progress">
-        <span>Domande ${pageStart + 1}-${pageStart + pageQuestions.length} / ${state.questions.length}</span>
+        <span>${pageLabel}</span>
         <span id="scoreLabel">Punteggio: ${state.score}</span>
       </div>
       <div id="pageQuestions"></div>
@@ -930,7 +936,7 @@ function render() {
       const card = document.createElement("div");
       card.className = "question-box";
       card.style.marginBottom = "12px";
-      const groupLabel = q.groupIndex
+      const groupLabel = (q.groupIndex && q.stepsInGroup > 1)
         ? `<p class="question-hint" style="margin-bottom:2px;">Parola ${q.groupIndex}/${q.groupTotal} &middot; passo ${q.stepInGroup}/${q.stepsInGroup}</p>`
         : "";
       card.innerHTML = `
