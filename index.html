@@ -668,6 +668,11 @@ function modeTitle(mode) {
 }
 
 function render() {
+  renderInner();
+  window.scrollTo(0, 0);
+}
+
+function renderInner() {
   const app = document.getElementById("app");
 
   // Configurazione centralizzata per ciascuna modalità del quiz
