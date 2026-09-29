@@ -2,7 +2,7 @@
 // Strategia: "cache-first" — al primo caricamento (con internet) salva tutti i file
 // necessari; da quel momento in poi li serve dalla cache, funzionando anche offline.
 
-const CACHE_NAME = "genki-quiz-v15";
+const CACHE_NAME = "genki-quiz-v17";
 const FILES_TO_CACHE = [
   "./index.html",
   "./data-vocab.js",
@@ -10,6 +10,7 @@ const FILES_TO_CACHE = [
   "./data-grammar.js",
   "./data-verbs.js",
   "./data-adjectives.js",
+  "./data-games.js",
   "./manifest.json",
   "./icon-180.png",
   "./icon-192.png",

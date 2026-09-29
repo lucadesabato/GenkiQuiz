@@ -176,6 +176,7 @@
 <script src="data-grammar.js"></script>
 <script src="data-verbs.js"></script>
 <script src="data-adjectives.js"></script>
+<script src="data-games.js"></script>
 <script>
 // ===================== MOTORE DEL QUIZ =====================
 // I database (vocabolario, kanji, grammatica) sono caricati dai file
@@ -258,7 +259,8 @@ let state = {
   answered: false,
   finalTotal: 0,      // domande realmente affrontate quando il quiz finisce (naturalmente o con "Esci")
   pageAnswers: [],    // risposte scelte nella pagina corrente (modalità esame), prima di correggere
-  pageChecked: false  // se la pagina corrente è già stata corretta
+  pageChecked: false, // se la pagina corrente è già stata corretta
+  gameRound: null     // dati del round di gioco corrente (sezione Giochi)
 };
 
 // Costruisce N domande di vocabolario (kana/kanji <-> italiano)
@@ -664,8 +666,200 @@ function modeTitle(mode) {
   if (mode === "grammar") return "Grammatica";
   if (mode === "verbs") return "Verbi";
   if (mode === "adjectives") return "Aggettivi";
+  if (mode === "games") return "Giochi";
   return "Vocabolario";
 }
+
+// ===================== GIOCHI (Memory, Completa la frase, Audio) =====================
+// Ogni volta che entri, o premi "Avanti", si sceglie a caso uno dei giochi disponibili
+// per i capitoli selezionati (se un gioco non ha abbastanza contenuti, viene escluso).
+function speak(text) {
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ja-JP";
+    u.rate = 0.85;
+    window.speechSynthesis.speak(u);
+  } catch (e) { /* sintesi vocale non disponibile: si ignora silenziosamente */ }
+}
+
+function startNewGameRound() {
+  const memPool = vocabCombinedPool(state.maxLesson);
+  const sentPool = GAME_SENTENCES.filter(s => s.lesson <= state.maxLesson);
+  const available = [];
+  if (memPool.length >= 6) available.push("memory");
+  if (sentPool.length >= 1) { available.push("fillblank"); available.push("audio"); }
+
+  if (available.length === 0) {
+    state.gameRound = { type: "empty" };
+    return;
+  }
+  const type = available[Math.floor(Math.random() * available.length)];
+
+  if (type === "memory") {
+    const words = shuffle(memPool).slice(0, 6);
+    let cards = [];
+    words.forEach((w, i) => {
+      cards.push({ pairId: i, text: jpLabel(w), matched: false });
+      cards.push({ pairId: i, text: w.it, matched: false });
+    });
+    cards = shuffle(cards).map((c, i) => ({ ...c, id: i }));
+    state.gameRound = { type: "memory", cards, flipped: [], matchedPairs: 0, totalPairs: 6 };
+    return;
+  }
+
+  if (type === "fillblank") {
+    const s = shuffle(sentPool)[0];
+    const options = shuffle([...new Set(s.particle_options)]);
+    state.gameRound = { type: "fillblank", sentence: s, options, answered: false, selected: null };
+    return;
+  }
+
+  // audio
+  const s = shuffle(sentPool)[0];
+  const options = shuffle([s.it_correct, ...s.it_wrongs]);
+  state.gameRound = { type: "audio", sentence: s, options, answered: false, selected: null };
+}
+
+function renderGamesScreen(app) {
+  const r = state.gameRound;
+  if (!r) { startNewGameRound(); }
+  const round = state.gameRound;
+
+  if (round.type === "empty") {
+    app.innerHTML = `
+      <h1>Genki I &mdash; Giochi</h1>
+      <div class="card"><p style="margin:0;">Non ci sono abbastanza contenuti in questo intervallo di capitoli per i giochi. Prova un intervallo più ampio.</p></div>
+      <button id="backGamesBtn" class="secondary">&larr; Cambia capitoli</button>
+    `;
+    document.getElementById("backGamesBtn").onclick = () => { state.screen = "chapters"; render(); };
+    return;
+  }
+
+  if (round.type === "memory") {
+    app.innerHTML = `
+      <h1>Genki I &mdash; 🎮 Memory</h1>
+      <p class="subtitle">Trova le ${round.totalPairs} coppie giapponese ↔ italiano</p>
+      <div id="memGrid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:14px;"></div>
+      <button id="nextGameBtn" class="hidden">Prossimo gioco &rarr;</button>
+      <button id="backGamesBtn" class="secondary">Esci dai giochi</button>
+    `;
+    const grid = document.getElementById("memGrid");
+    round.cards.forEach(c => {
+      const btn = document.createElement("button");
+      btn.className = "secondary";
+      btn.style.cssText = "min-height:70px; font-size:14px; padding:6px; word-break:break-word;";
+      const isFlipped = round.flipped.includes(c.id) || c.matched;
+      btn.textContent = isFlipped ? c.text : "🀫";
+      if (c.matched) { btn.style.opacity = "0.35"; btn.disabled = true; }
+      btn.onclick = () => {
+        if (c.matched || round.flipped.includes(c.id) || round.flipped.length >= 2) return;
+        round.flipped.push(c.id);
+        if (round.flipped.length === 2) {
+          const [a, b] = round.flipped.map(id => round.cards.find(x => x.id === id));
+          if (a.pairId === b.pairId) {
+            a.matched = true; b.matched = true;
+            round.matchedPairs++;
+            round.flipped = [];
+            if (round.matchedPairs === round.totalPairs) {
+              setTimeout(() => { document.getElementById("nextGameBtn").classList.remove("hidden"); }, 200);
+            }
+            render();
+          } else {
+            render();
+            setTimeout(() => { round.flipped = []; render(); }, 700);
+          }
+        } else {
+          render();
+        }
+      };
+      grid.appendChild(btn);
+    });
+    document.getElementById("nextGameBtn").onclick = () => { startNewGameRound(); render(); };
+    document.getElementById("backGamesBtn").onclick = () => { state.screen = "chapters"; render(); };
+    return;
+  }
+
+  if (round.type === "fillblank") {
+    const s = round.sentence;
+    app.innerHTML = `
+      <h1>Genki I &mdash; 🎮 Completa la frase</h1>
+      <div class="question-box">
+        <p class="question-text">${s.blank_furigana}</p>
+      </div>
+      <div id="gameOptions"></div>
+      <div class="feedback" id="gameFeedback" style="display:none;"></div>
+      <button id="nextGameBtn" class="hidden">Prossimo gioco &rarr;</button>
+      <button id="backGamesBtn" class="secondary">Esci dai giochi</button>
+    `;
+    const optsDiv = document.getElementById("gameOptions");
+    round.options.forEach(opt => {
+      const btn = document.createElement("button");
+      btn.className = "option";
+      btn.textContent = opt;
+      btn.onclick = () => {
+        if (round.answered) return;
+        round.answered = true;
+        const isCorrect = opt === s.particle_correct;
+        const fb = document.getElementById("gameFeedback");
+        [...optsDiv.children].forEach(c => {
+          c.disabled = true;
+          if (c.textContent === s.particle_correct) c.classList.add("correct");
+          else if (c === btn) c.classList.add("wrong");
+        });
+        fb.style.display = "block";
+        fb.className = "feedback " + (isCorrect ? "correct" : "wrong");
+        fb.textContent = (isCorrect ? "Corretto! " : "Sbagliato — la risposta giusta è \"" + s.particle_correct + "\". ") + s.jp_furigana + "  →  " + s.it_correct;
+        document.getElementById("nextGameBtn").classList.remove("hidden");
+      };
+      optsDiv.appendChild(btn);
+    });
+    document.getElementById("nextGameBtn").onclick = () => { startNewGameRound(); render(); };
+    document.getElementById("backGamesBtn").onclick = () => { state.screen = "chapters"; render(); };
+    return;
+  }
+
+  // audio
+  const s = round.sentence;
+  app.innerHTML = `
+    <h1>Genki I &mdash; 🎮 Audio</h1>
+    <p class="subtitle">Ascolta la frase e scegli la traduzione giusta</p>
+    <div class="question-box" style="text-align:center;">
+      <button id="playBtn" style="font-size:22px; padding:14px 24px;">🔊 Ascolta</button>
+    </div>
+    <div id="gameOptions"></div>
+    <div class="feedback" id="gameFeedback" style="display:none;"></div>
+    <button id="nextGameBtn" class="hidden">Prossimo gioco &rarr;</button>
+    <button id="backGamesBtn" class="secondary">Esci dai giochi</button>
+  `;
+  document.getElementById("playBtn").onclick = () => speak(s.jp_plain);
+  speak(s.jp_plain);
+  const optsDiv = document.getElementById("gameOptions");
+  round.options.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.className = "option";
+    btn.textContent = opt;
+    btn.onclick = () => {
+      if (round.answered) return;
+      round.answered = true;
+      const isCorrect = opt === s.it_correct;
+      const fb = document.getElementById("gameFeedback");
+      [...optsDiv.children].forEach(c => {
+        c.disabled = true;
+        if (c.textContent === s.it_correct) c.classList.add("correct");
+        else if (c === btn) c.classList.add("wrong");
+      });
+      fb.style.display = "block";
+      fb.className = "feedback " + (isCorrect ? "correct" : "wrong");
+      fb.textContent = (isCorrect ? "Corretto! " : "Sbagliato. ") + "Frase: " + s.jp_furigana;
+      document.getElementById("nextGameBtn").classList.remove("hidden");
+    };
+    optsDiv.appendChild(btn);
+  });
+  document.getElementById("nextGameBtn").onclick = () => { startNewGameRound(); render(); };
+  document.getElementById("backGamesBtn").onclick = () => { state.screen = "chapters"; render(); };
+}
+// ==============================================================================
 
 function render() {
   renderInner();
@@ -728,6 +922,11 @@ function renderInner() {
       setupQuestion: state.subMode === "translationOnly"
         ? "Quanti aggettivi vuoi ripassare? (ognuno = 1 domanda: solo significato)"
         : "Quanti aggettivi vuoi ripassare? (ognuno = 3 domande: tipo, forma, significato)"
+    },
+    games: {
+      title: "Giochi",
+      lessons: "Lezioni 1-12",
+      maxLesson: 12
     }
   };
 
@@ -745,9 +944,11 @@ function renderInner() {
         <button id="verbsBtn" class="secondary">${MODES.verbs.menuLabel}</button>
         <div style="height:10px"></div>
         <button id="adjectivesBtn" class="secondary">${MODES.adjectives.menuLabel}</button>
+        <div style="height:10px"></div>
+        <button id="gamesBtn" class="secondary">🎮 Giochi</button>
       </div>
     `;
-    ["vocab", "kanji", "grammar", "verbs", "adjectives"].forEach(m => {
+    ["vocab", "kanji", "grammar", "verbs", "adjectives", "games"].forEach(m => {
       document.getElementById(m + "Btn").onclick = () => {
         state.mode = m;
         if (m === "verbs" || m === "adjectives" || m === "kanji" || m === "vocab") {
@@ -829,6 +1030,12 @@ function renderInner() {
       btn.style.fontSize = "15px";
       btn.onclick = () => {
         state.maxLesson = parseInt(btn.dataset.lesson, 10);
+        if (state.mode === "games") {
+          startNewGameRound();
+          state.screen = "games";
+          render();
+          return;
+        }
         const filteredMax = computeFilteredMax();
         if (filteredMax === 0) {
           alert("Non ci sono contenuti disponibili in questo intervallo di capitoli per questa modalità. Prova un intervallo più ampio.");
@@ -849,6 +1056,11 @@ function renderInner() {
       state.screen = (state.mode === "verbs" || state.mode === "adjectives" || state.mode === "kanji" || state.mode === "vocab") ? "subMode" : "mode";
       render();
     };
+    return;
+  }
+
+  if (state.screen === "games") {
+    renderGamesScreen(app);
     return;
   }
 
