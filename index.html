@@ -1070,6 +1070,63 @@ function renderInner() {
       ? `Parola ${q.groupIndex} / ${q.groupTotal} &middot; passo ${q.stepInGroup}/${q.stepsInGroup}`
       : `Domanda ${state.idx + 1} / ${state.questions.length}`;
 
+    if (q.inputType === "text" && state.mode === "kanji") {
+      // ===== Scrittura Kanji: UNA domanda alla volta, feedback immediato =====
+      const isLast = state.idx + 1 >= state.questions.length;
+      app.innerHTML = `
+        <div class="progress">
+          <span>Domanda ${state.idx + 1} / ${state.questions.length}</span>
+          <span id="scoreSpan">Punteggio: ${state.score}</span>
+        </div>
+        <div class="question-box">
+          <p class="question-hint">${q.promptLabel}</p>
+          <p class="question-text">${q.mainText}</p>
+          <input type="text" id="kanjiInput" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+            placeholder="Scrivi qui il kanji..."
+            style="width:100%; padding:12px; font-size:22px; border-radius:10px; border:1.5px solid #e0ddd6; margin-top:8px;">
+          <div class="feedback" id="kanjiFb" style="display:none;"></div>
+        </div>
+        <button id="checkBtn">Controlla</button>
+        <button id="nextBtn" class="hidden">${isLast ? "Vedi risultati" : "Prossima domanda &rarr;"}</button>
+        <button id="exitBtn" class="secondary">Esci</button>
+      `;
+      const input = document.getElementById("kanjiInput");
+      const fb = document.getElementById("kanjiFb");
+      input.focus();
+
+      const check = () => {
+        if (state.answered) return;
+        const typed = input.value.trim();
+        if (typed === "") return;
+        state.answered = true;
+        input.disabled = true;
+        fb.style.display = "block";
+        if (q.acceptedAnswers.includes(typed)) {
+          state.score++;
+          fb.textContent = `Corretto! Risposta corretta: ${q.displayAnswer}`;
+          fb.className = "feedback correct";
+        } else {
+          fb.textContent = `Sbagliato — risposta corretta: ${q.displayAnswer}`;
+          fb.className = "feedback wrong";
+        }
+        document.getElementById("scoreSpan").textContent = "Punteggio: " + state.score;
+        document.getElementById("checkBtn").classList.add("hidden");
+        document.getElementById("nextBtn").classList.remove("hidden");
+      };
+      document.getElementById("checkBtn").onclick = check;
+      document.getElementById("nextBtn").onclick = () => {
+        if (isLast) { finishQuiz(state.idx + 1); return; }
+        state.idx++;
+        state.answered = false;
+        render();
+      };
+      input.addEventListener("keydown", e => { if (e.key === "Enter") check(); });
+      document.getElementById("exitBtn").onclick = () => {
+        finishQuiz(state.answered ? state.idx + 1 : state.idx);
+      };
+      return;
+    }
+
     if (q.inputType === "text") {
       // ===== Modalità "esame" anche per la Scrittura: una PAGINA di più domande insieme =====
       const PAGE_SIZE = 10;
