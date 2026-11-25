@@ -1086,6 +1086,14 @@ function renderInner() {
             style="width:100%; padding:12px; font-size:22px; border-radius:10px; border:1.5px solid #e0ddd6; margin-top:8px;">
           <div class="feedback" id="kanjiFb" style="display:none;"></div>
         </div>
+        <div class="question-box" id="practiceBox" style="display:none;">
+          <p class="question-hint">Riscrivilo per allenarti: <b style="font-size:22px;">${q.displayAnswer}</b></p>
+          <input type="text" id="practiceInput" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+            placeholder="Riscrivi il kanji..."
+            style="width:100%; padding:12px; font-size:22px; border-radius:10px; border:1.5px solid #e0ddd6; margin-top:8px;">
+          <div class="feedback" id="practiceFb" style="display:none;"></div>
+        </div>
+        <button id="practiceBtn" class="hidden">Controlla</button>
         <button id="checkBtn">Controlla</button>
         <button id="nextBtn" class="hidden">${isLast ? "Vedi risultati" : "Prossima domanda &rarr;"}</button>
         <button id="exitBtn" class="secondary">Esci</button>
@@ -1108,11 +1116,39 @@ function renderInner() {
         } else {
           fb.textContent = `Sbagliato — risposta corretta: ${q.displayAnswer}`;
           fb.className = "feedback wrong";
+          // Sbagliato: devi riscriverlo correttamente prima di proseguire
+          document.getElementById("checkBtn").classList.add("hidden");
+          document.getElementById("scoreSpan").textContent = "Punteggio: " + state.score;
+          document.getElementById("practiceBox").style.display = "block";
+          document.getElementById("practiceBtn").classList.remove("hidden");
+          document.getElementById("practiceInput").focus();
+          return;
         }
         document.getElementById("scoreSpan").textContent = "Punteggio: " + state.score;
         document.getElementById("checkBtn").classList.add("hidden");
         document.getElementById("nextBtn").classList.remove("hidden");
       };
+      const practiceInput = document.getElementById("practiceInput");
+      const practiceFb = document.getElementById("practiceFb");
+      const checkPractice = () => {
+        const typed = practiceInput.value.trim();
+        if (typed === "") return;
+        practiceFb.style.display = "block";
+        if (q.acceptedAnswers.includes(typed)) {
+          practiceInput.disabled = true;
+          practiceFb.textContent = "Bene! Ora lo conosci meglio.";
+          practiceFb.className = "feedback correct";
+          document.getElementById("practiceBtn").classList.add("hidden");
+          document.getElementById("nextBtn").classList.remove("hidden");
+        } else {
+          practiceFb.textContent = `Non ancora — riprova: ${q.displayAnswer}`;
+          practiceFb.className = "feedback wrong";
+          practiceInput.value = "";
+          practiceInput.focus();
+        }
+      };
+      document.getElementById("practiceBtn").onclick = checkPractice;
+      practiceInput.addEventListener("keydown", e => { if (e.key === "Enter") checkPractice(); });
       document.getElementById("checkBtn").onclick = check;
       document.getElementById("nextBtn").onclick = () => {
         if (isLast) { finishQuiz(state.idx + 1); return; }
